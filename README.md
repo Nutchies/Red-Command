@@ -114,31 +114,6 @@ go build -o agent .
 ./agent --server https://your-server:8443
 ```
 
-## API接口
-
-### 认证
-- `POST /api/token` - 获取JWT令牌
-
-### 用户管理
-- `GET /api/users` - 获取用户列表
-- `POST /api/users` - 创建用户
-
-### 资产管理
-- `GET /api/assets` - 获取资产列表
-- `POST /api/assets` - 创建资产
-- `PUT /api/assets/{id}` - 更新资产
-- `DELETE /api/assets/{id}` - 删除资产
-
-### 聊天室
-- `GET /api/chat/rooms` - 获取聊天室列表
-- `POST /api/chat/rooms` - 创建聊天室
-- `GET /api/chat/rooms/{id}/messages` - 获取消息列表
-- `POST /api/chat/messages` - 发送消息
-- `POST /api/chat/upload` - 上传文件/图片
-
-### WebSocket
-- `wss://host:8443/ws/chat/{room_id}` - 实时聊天
-
 ## 使用说明
 
 ### 默认账号
