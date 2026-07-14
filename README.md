@@ -195,10 +195,6 @@ cd agent
 go build -o agent .
 ```
 
-## 许可证
-
-MIT License
-
 ## 贡献
 
 欢迎提交Issue和Pull Request！
