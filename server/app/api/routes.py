@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import Response, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+from sqlalchemy import or_
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -719,7 +720,8 @@ async def upload_pen_test_result(
         file_type=file_type,
         remark=remark,
         category=category,
-        user_group=current_user.user_group
+        user_group=current_user.user_group,
+        created_by=current_user.id
     )
     
     db.add(result)
@@ -740,7 +742,7 @@ async def search_pen_test_results(
     query = db.query(PenTestResult)
     
     if current_user.role != "admin":
-        query = query.filter(PenTestResult.user_group == current_user.user_group)
+        query = query.filter(PenTestResult.created_by == current_user.id)
     
     if target_ip:
         query = query.filter(PenTestResult.target_ip.like(f"%{target_ip}%"))
@@ -783,6 +785,9 @@ async def delete_pen_test_result(
     if not result:
         raise HTTPException(status_code=404, detail="成果不存在")
     
+    if current_user.role != "admin" and result.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权删除该成果")
+    
     file_path = result.file_path
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -799,7 +804,12 @@ async def delete_pen_test_host(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    results = db.query(PenTestResult).filter(PenTestResult.target_ip == target_ip).all()
+    query = db.query(PenTestResult).filter(PenTestResult.target_ip == target_ip)
+    
+    if current_user.role != "admin":
+        query = query.filter(PenTestResult.created_by == current_user.id)
+    
+    results = query.all()
     if not results:
         raise HTTPException(status_code=404, detail="未找到该IP的成果记录")
     
@@ -1059,7 +1069,8 @@ async def create_task_plan(
         team=team,
         status=status,
         start_time=datetime.fromisoformat(start_time) if start_time else None,
-        end_time=datetime.fromisoformat(end_time) if end_time else None
+        end_time=datetime.fromisoformat(end_time) if end_time else None,
+        created_by=current_user.id
     )
     db.add(plan)
     db.commit()
@@ -1079,7 +1090,12 @@ async def get_task_plans(
     query = db.query(TaskPlan)
     
     if current_user.role != "admin":
-        query = query.filter(TaskPlan.team == current_user.user_group)
+        query = query.filter(
+            or_(
+                TaskPlan.created_by == current_user.id,
+                TaskPlan.team == current_user.user_group
+            )
+        )
     
     if keyword:
         query = query.filter(TaskPlan.name.like(f"%{keyword}%"))
@@ -1150,6 +1166,9 @@ async def delete_task_plan(
     plan = db.query(TaskPlan).filter(TaskPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="任务管理不存在")
+    
+    if current_user.role != "admin" and plan.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权删除该任务")
     
     db.delete(plan)
     db.commit()
@@ -1251,6 +1270,10 @@ async def delete_task_target(
     target = db.query(TaskTarget).filter(TaskTarget.id == target_id).first()
     if not target:
         raise HTTPException(status_code=404, detail="目标不存在")
+    
+    plan = db.query(TaskPlan).filter(TaskPlan.id == target.plan_id).first()
+    if current_user.role != "admin" and plan.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权删除该目标")
     
     db.delete(target)
     db.commit()
@@ -1456,7 +1479,11 @@ async def get_chat_users(current_user: User = Depends(get_current_user), db: Ses
 
 @router.get("/chat/rooms", response_model=List[ChatRoomResponse])
 async def get_chat_rooms(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rooms = db.query(ChatRoom).order_by(ChatRoom.updated_at.desc()).all()
+    rooms = db.query(ChatRoom).join(
+        ChatRoomMember, ChatRoomMember.room_id == ChatRoom.id
+    ).filter(
+        ChatRoomMember.user_id == current_user.id
+    ).order_by(ChatRoom.updated_at.desc()).all()
     result = []
     for room in rooms:
         members = []
@@ -1530,6 +1557,13 @@ async def create_chat_room(request: ChatRoomCreateRequest, current_user: User = 
 
 @router.get("/chat/rooms/{room_id}/messages", response_model=List[ChatMessageResponse])
 async def get_chat_messages(room_id: int, limit: int = 50, offset: int = 0, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    is_member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="无权访问该聊天室")
+    
     messages = db.query(ChatMessage).filter(ChatMessage.room_id == room_id).order_by(ChatMessage.created_at.asc()).offset(offset).limit(limit).all()
     result = []
     for msg in messages:
@@ -1561,6 +1595,13 @@ async def get_chat_messages(room_id: int, limit: int = 50, offset: int = 0, curr
 
 @router.post("/chat/messages", response_model=ChatMessageResponse)
 async def send_chat_message(request: ChatMessageCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    is_member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == request.room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="无权在该聊天室发送消息")
+    
     msg = ChatMessage(
         room_id=request.room_id,
         user_id=current_user.id,

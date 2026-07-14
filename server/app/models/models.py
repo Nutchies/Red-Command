@@ -87,7 +87,10 @@ class PenTestResult(Base):
     remark = Column(Text)
     category = Column(String(50), default="other")
     user_group = Column(String(50), default="未分组")
+    created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    creator = relationship("User")
 
 
 class Tool(Base):
@@ -129,10 +132,12 @@ class TaskPlan(Base):
     status = Column(String(20), default="pending")
     start_time = Column(DateTime(timezone=True))
     end_time = Column(DateTime(timezone=True))
+    created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     targets = relationship("TaskTarget", back_populates="plan", cascade="all, delete-orphan")
+    creator = relationship("User")
 
 
 class TaskTarget(Base):

@@ -214,3 +214,43 @@ func (r *Recorder) IsFFmpegAvailable() bool {
 	_, err := exec.LookPath("ffmpeg")
 	return err == nil
 }
+
+func IsScreenLocked() bool {
+	display := os.Getenv("DISPLAY")
+	if display == "" {
+		display = ":0"
+	}
+
+	if _, err := exec.LookPath("loginctl"); err == nil {
+		sessionID := os.Getenv("XDG_SESSION_ID")
+		if sessionID != "" {
+			output, err := exec.Command("loginctl", "show-session", "-p", "LockedHint", sessionID).Output()
+			if err == nil && strings.Contains(string(output), "LockedHint=yes") {
+				return true
+			}
+		}
+	}
+
+	if _, err := exec.LookPath("gdbus"); err == nil {
+		output, err := exec.Command("gdbus", "call", "--session", "--dest", "org.gnome.ScreenSaver", "--object-path", "/org/gnome/ScreenSaver", "--method", "org.gnome.ScreenSaver.GetActive").Output()
+		if err == nil && strings.Contains(string(output), "true") {
+			return true
+		}
+	}
+
+	if _, err := exec.LookPath("xssstate"); err == nil {
+		output, err := exec.Command("xssstate", "-s").Output()
+		if err == nil && strings.Contains(string(output), "locked") {
+			return true
+		}
+	}
+
+	if _, err := exec.LookPath("qdbus"); err == nil {
+		output, err := exec.Command("qdbus", "org.kde.screensaver", "/ScreenSaver", "org.freedesktop.ScreenSaver.GetActive").Output()
+		if err == nil && strings.Contains(string(output), "true") {
+			return true
+		}
+	}
+
+	return false
+}

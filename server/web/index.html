@@ -1069,39 +1069,39 @@
                 <div class="logo">Red<span class="logo-accent">C2</span></div>
             </div>
             <div class="menu-container">
-                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'dashboard'}" @click="currentPage = 'dashboard'">
+                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'dashboard'}" @click="setCurrentPage('dashboard')">
                     <span class="menu-item-icon">📊</span>
                     <span>Dashboard</span>
                 </div>
-                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'clients'}" @click="currentPage = 'clients'">
+                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'clients'}" @click="setCurrentPage('clients')">
                     <span class="menu-item-icon">🖥️</span>
                     <span>主机管理</span>
                 </div>
-                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'recordings'}" @click="currentPage = 'recordings'">
+                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'recordings'}" @click="setCurrentPage('recordings')">
                     <span class="menu-item-icon">🎬</span>
                     <span>桌面录屏</span>
                 </div>
-                <div class="menu-item" :class="{active: currentPage === 'pen-test'}" @click="currentPage = 'pen-test'">
+                <div class="menu-item" :class="{active: currentPage === 'pen-test'}" @click="setCurrentPage('pen-test')">
                     <span class="menu-item-icon">📦</span>
                     <span>成果汇总</span>
                 </div>
-                <div class="menu-item" :class="{active: currentPage === 'tools'}" @click="currentPage = 'tools'">
+                <div class="menu-item" :class="{active: currentPage === 'tools'}" @click="setCurrentPage('tools')">
                     <span class="menu-item-icon">🛠️</span>
                     <span>工具列表</span>
                 </div>
-                <div class="menu-item" :class="{active: currentPage === 'task-plans'}" @click="currentPage = 'task-plans'">
+                <div class="menu-item" :class="{active: currentPage === 'task-plans'}" @click="setCurrentPage('task-plans')">
                     <span class="menu-item-icon">📋</span>
                     <span>任务管理</span>
                 </div>
-                <div class="menu-item" :class="{active: currentPage === 'assets'}" @click="currentPage = 'assets'">
+                <div class="menu-item" :class="{active: currentPage === 'assets'}" @click="setCurrentPage('assets')">
                     <span class="menu-item-icon">🏢</span>
                     <span>资产管理</span>
                 </div>
-                <div class="menu-item" :class="{active: currentPage === 'chat'}" @click="currentPage = 'chat'">
+                <div class="menu-item" :class="{active: currentPage === 'chat'}" @click="setCurrentPage('chat')">
                     <span class="menu-item-icon">💬</span>
                     <span>作战聊天室</span>
                 </div>
-                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'users'}" @click="currentPage = 'users'">
+                <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'users'}" @click="setCurrentPage('users')">
                     <span class="menu-item-icon">👥</span>
                     <span>用户管理</span>
                 </div>
@@ -1368,7 +1368,7 @@
                                 IP: {{ selectedRecordingClient.ip_address }} | Client ID: {{ selectedRecordingClient.client_id }}
                             </div>
                         </div>
-                        <div class="back-btn" @click="selectedRecordingClient = null">
+                        <div class="back-btn" @click="selectedRecordingClient = null; localStorage.removeItem('selectedRecordingClientId')">
                             ← 返回列表
                         </div>
                     </div>
@@ -1489,7 +1489,7 @@
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <el-button @click="showPenTestUploadDialog = true" type="success" size="small">上传文件</el-button>
-                            <div class="back-btn" @click="selectedPenTestHost = null">
+                            <div class="back-btn" @click="selectedPenTestHost = null; localStorage.removeItem('selectedPenTestHostIp')">
                                 ← 返回列表
                             </div>
                         </div>
@@ -1632,7 +1632,7 @@
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <el-button @click="showToolVersionUploadDialog = true" size="small" type="primary">上传版本</el-button>
-                            <div class="back-btn" @click="selectedTool = null">
+                            <div class="back-btn" @click="selectedTool = null; localStorage.removeItem('selectedToolId')">
                                 ← 返回列表
                             </div>
                         </div>
@@ -2459,7 +2459,15 @@ createApp({
         const currentUserRole = ref(localStorage.getItem('role') || 'operator');
         const currentUserGroup = ref(localStorage.getItem('user_group') || '');
         const username = ref(localStorage.getItem('username') || '');
-        const currentPage = ref(currentUserRole.value === 'admin' ? 'dashboard' : 'pen-test');
+        const savedPage = localStorage.getItem('currentPage');
+        const currentPage = ref(savedPage || (currentUserRole.value === 'admin' ? 'dashboard' : 'pen-test'));
+
+        const setCurrentPage = (page) => {
+            currentPage.value = page;
+            localStorage.setItem('currentPage', page);
+            sessionStorage.setItem('pageSwitchFlag', 'true');
+            setTimeout(() => sessionStorage.removeItem('pageSwitchFlag'), 1000);
+        };
         const loading = ref(false);
         const loginLoading = ref(false);
         const loginForm = ref({ username: '', password: '' });
@@ -2719,7 +2727,7 @@ createApp({
                 currentUserRole.value = res.data.role;
                 currentUserGroup.value = res.data.user_group;
                 isLoggedIn.value = true;
-                currentPage.value = res.data.role === 'admin' ? 'dashboard' : 'pen-test';
+                setCurrentPage(res.data.role === 'admin' ? 'dashboard' : 'pen-test');
                 if (res.data.role === 'admin') {
                     refreshDashboard();
                 }
@@ -2738,7 +2746,7 @@ createApp({
             isLoggedIn.value = false;
             currentUserRole.value = 'operator';
             currentUserGroup.value = '';
-            currentPage.value = 'dashboard';
+            setCurrentPage('dashboard');
             loginForm.value = { username: '', password: '' };
             ElementPlus.ElMessage.success('已退出登录');
         };
@@ -2794,7 +2802,6 @@ createApp({
         };
 
         const deleteClient = async (client) => {
-            console.log('deleteClient called with:', client);
             try {
                 await ElementPlus.ElMessageBox.confirm(
                     `确定要删除主机 ${client.hostname} 吗？`,
@@ -2805,14 +2812,10 @@ createApp({
                         type: 'warning'
                     }
                 );
-                console.log('Deleting client with id:', client.id);
-                const res = await axios.delete(`${API_BASE}/clients/${client.id}`);
-                console.log('Delete response:', res.data);
+                await axios.delete(`${API_BASE}/clients/${client.id}`);
                 ElementPlus.ElMessage.success('主机删除成功');
-                clients.value = clients.value.filter(c => c.id !== client.id);
-                if (selectedClient.value && selectedClient.value.id === client.id) {
-                    selectedClient.value = null;
-                }
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete error:', err);
@@ -2948,6 +2951,17 @@ createApp({
                 recordings.value = res.data;
                 recordPage.value = 1;
                 buildRecordingClients();
+                
+                const savedClientId = localStorage.getItem('selectedRecordingClientId');
+                if (savedClientId && recordingClients.value.length > 0) {
+                    const savedClient = recordingClients.value.find(c => c.id.toString() === savedClientId);
+                    if (savedClient) {
+                        const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
+                        if (isPageReload) {
+                            selectRecordingClient(savedClient);
+                        }
+                    }
+                }
             } catch (err) {
                 console.error(err);
                 recordings.value = [];
@@ -2979,7 +2993,8 @@ createApp({
 
         const selectRecordingClient = (client) => {
             selectedRecordingClient.value = client;
-            selectedClientVideos.value = recordings.value.filter(r => r.client_id === client.client_id);
+            selectedClientVideos.value = recordings.value.filter(r => r.client_id === client.id);
+            localStorage.setItem('selectedRecordingClientId', client.id.toString());
         };
 
         const playRecording = async (recording) => {
@@ -3002,17 +3017,15 @@ createApp({
                     type: 'warning'
                 });
 
-                const token = localStorage.getItem('token');
-                await axios.delete(`${API_BASE}/videos/${recording.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                await axios.delete(`${API_BASE}/videos/${recording.id}`);
 
                 ElementPlus.ElMessage.success('视频删除成功');
-                await handleSearch();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('删除失败:', err);
-                    ElementPlus.ElMessage.error('删除失败: ' + (err.message || '未知错误'));
+                    ElementPlus.ElMessage.error('删除失败: ' + (err.response?.data?.detail || err.message || '未知错误'));
                 }
             }
         };
@@ -3058,6 +3071,7 @@ createApp({
             selectedPenTestHost.value = host;
             penTestUploadForm.value.target_ip = host.target_ip;
             penTestUploadForm.value.target_organization = host.target_organization || '';
+            localStorage.setItem('selectedPenTestHostIp', host.target_ip);
             
             loading.value = true;
             try {
@@ -3109,6 +3123,7 @@ createApp({
             loading.value = true;
             let successCount = 0;
             let failCount = 0;
+            let errorMessages = [];
 
             for (const item of penTestUploadFileList.value) {
                 const file = item.raw;
@@ -3124,13 +3139,22 @@ createApp({
                 formData.append('file', file);
 
                 try {
-                    await axios.post(`${API_BASE}/pen-test/upload`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
+                    const response = await axios.post(`${API_BASE}/pen-test/upload`, formData);
+                    console.log('上传成功:', response.data);
                     successCount++;
                 } catch (err) {
                     failCount++;
+                    let errorMsg = '';
+                    if (err.response) {
+                        errorMsg = `HTTP ${err.response.status}: ${err.response.data?.detail || err.response.statusText}`;
+                    } else if (err.request) {
+                        errorMsg = `网络错误: ${err.message}`;
+                    } else {
+                        errorMsg = `请求错误: ${err.message}`;
+                    }
+                    errorMessages.push(`${file.name}: ${errorMsg}`);
                     console.error('上传文件失败:', file.name, err);
+                    console.error('完整错误:', JSON.stringify(err, null, 2));
                 }
             }
 
@@ -3147,6 +3171,9 @@ createApp({
                 ElementPlus.ElMessage.success(`上传成功，共 ${successCount} 个文件`);
             } else {
                 ElementPlus.ElMessage.warning(`上传完成，成功 ${successCount} 个，失败 ${failCount} 个`);
+                if (errorMessages.length > 0) {
+                    ElementPlus.ElMessage.error('失败详情:\n' + errorMessages.join('\n'));
+                }
             }
 
             if (selectedPenTestHost.value && selectedPenTestHost.value.target_ip === penTestUploadForm.value.target_ip) {
@@ -3184,9 +3211,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/pen-test/${row.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                if (selectedPenTestHost.value) {
-                    selectPenTestHost(selectedPenTestHost.value);
-                }
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -3204,8 +3230,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/pen-test/batch/${encodeURIComponent(host.target_ip)}`);
                 ElementPlus.ElMessage.success('删除成功');
-                selectedPenTestHost.value = null;
-                loadPenTestHosts();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -3223,8 +3249,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/tools/${tool.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                selectedTool.value = null;
-                loadTools();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -3252,6 +3278,7 @@ createApp({
 
         const selectTool = async (tool) => {
             selectedTool.value = tool;
+            localStorage.setItem('selectedToolId', tool.id.toString());
             loading.value = true;
             try {
                 const url = `${API_BASE}/tools/${tool.id}/versions`;
@@ -3381,9 +3408,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/tools/versions/${row.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                if (selectedTool.value) {
-                    selectTool(selectedTool.value);
-                }
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -3507,8 +3533,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/task-plans/${plan.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                selectedTaskPlan.value = null;
-                loadTaskPlans();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -3594,9 +3620,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/task-targets/${target.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                if (selectedTaskPlan.value) {
-                    selectTaskPlan(selectedTaskPlan.value);
-                }
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -4049,7 +4074,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/assets/${asset.id}`);
                 ElementPlus.ElMessage.success('删除成功');
-                await fetchAssets();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     ElementPlus.ElMessage.error('删除失败: ' + (err.response?.data?.detail || err.message));
@@ -4139,7 +4165,7 @@ createApp({
                     await axios.delete(`${API_BASE}/users/${user.id}`);
                 }
                 ElementPlus.ElMessage.success('分组删除成功');
-                await fetchUsers();
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     ElementPlus.ElMessage.error('删除失败: ' + (err.response?.data?.detail || err.message));
@@ -4185,7 +4211,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/users/${user.id}`);
                 ElementPlus.ElMessage.success('用户删除成功');
-                await fetchUsers();
+                sessionStorage.removeItem('pageSwitchFlag');
+                window.location.reload();
             } catch (err) {
                 if (err !== 'cancel') {
                     ElementPlus.ElMessage.error('删除失败: ' + (err.response?.data?.detail || err.message));
@@ -4376,8 +4403,6 @@ createApp({
                 loadPenTestHosts();
             }
             if (page === 'tools') {
-                selectedTool.value = null;
-                selectedToolVersions.value = [];
                 loadTools();
             }
             if (page === 'task-plans') {
@@ -4398,8 +4423,45 @@ createApp({
             if (isLoggedIn.value) {
                 if (currentUserRole.value === 'admin') {
                     refreshDashboard();
-                } else {
-                    currentPage.value = 'pen-test';
+                }
+                if (currentPage.value === 'recordings') {
+                    handleSearch();
+                } else if (currentPage.value === 'clients') {
+                    fetchClients();
+                } else if (currentPage.value === 'assets') {
+                    fetchAssets();
+                } else if (currentPage.value === 'tools') {
+                    loadTools().then(() => {
+                        const savedToolId = localStorage.getItem('selectedToolId');
+                        if (savedToolId && tools.value.length > 0) {
+                            const savedTool = tools.value.find(t => t.id.toString() === savedToolId);
+                            if (savedTool) {
+                                const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
+                                if (isPageReload) {
+                                    selectTool(savedTool);
+                                }
+                            }
+                        }
+                    });
+                } else if (currentPage.value === 'task-plans') {
+                    loadTaskPlans();
+                } else if (currentPage.value === 'pen-test') {
+                    loadPenTestHosts().then(() => {
+                        const savedHostIp = localStorage.getItem('selectedPenTestHostIp');
+                        if (savedHostIp && penTestHosts.value.length > 0) {
+                            const savedHost = penTestHosts.value.find(h => h.target_ip === savedHostIp);
+                            if (savedHost) {
+                                const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
+                                if (isPageReload) {
+                                    selectPenTestHost(savedHost);
+                                }
+                            }
+                        }
+                    });
+                } else if (currentPage.value === 'users') {
+                    fetchUsers();
+                } else if (currentPage.value === 'chat') {
+                    fetchChatRooms();
                 }
             }
             document.addEventListener('click', closeContextMenu);
@@ -4468,7 +4530,7 @@ createApp({
                 handleMessageContextMenu, handleChatImageUpload,
                 handleChatFileUpload, previewImage,
                 connectWebSocket, disconnectWebSocket,
-                handleLogout
+                handleLogout, setCurrentPage
             };
     }
 }).use(ElementPlus, { locale: ElementPlusLocaleZhCn }).mount('#app');

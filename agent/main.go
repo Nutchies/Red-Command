@@ -51,6 +51,7 @@ func main() {
 	log.Printf("[Agent] 桌面录屏模块已加载")
 
 	var currentSessionID string
+	var wasLocked bool
 
 	if rec.IsFFmpegAvailable() {
 		sessionID, err := rec.StartRecording()
@@ -108,6 +109,31 @@ func main() {
 			}
 		case <-ticker.C:
 			log.Println("[Agent] ticker触发，开始执行循环任务")
+
+			if rec.IsFFmpegAvailable() {
+				isLocked := recorder.IsScreenLocked()
+				if isLocked && !wasLocked && currentSessionID != "" {
+					log.Println("[Agent] 检测到锁屏，停止录屏")
+					if err := rec.StopRecording(currentSessionID); err != nil {
+						log.Printf("[Agent] 停止录制失败: %v", err)
+					}
+					currentSessionID = ""
+					wasLocked = true
+				} else if !isLocked && wasLocked {
+					log.Println("[Agent] 检测到解锁，恢复录屏")
+					sessionID, err := rec.StartRecording()
+					if err != nil {
+						log.Printf("[Agent] 启动新录制失败: %v", err)
+						currentSessionID = ""
+					} else {
+						currentSessionID = sessionID
+						log.Printf("[Agent] 新录制已启动，会话ID: %s", sessionID)
+					}
+					wasLocked = false
+				} else if isLocked && wasLocked {
+					log.Println("[Agent] 保持锁屏状态，不录屏")
+				}
+			}
 
 			log.Println("[Agent] 执行Collect...")
 			collectDone := make(chan error, 1)
