@@ -1,4 +1,4 @@
-# RedC2
+# Red Command
 红队指挥控制系统
 =======
 # Red Command
