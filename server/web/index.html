@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RedC2 - 红队指挥控制平台</title>
+    <title>Red Command - 红队指挥控制平台</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus@2.9.7/dist/index.css">
     <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus@2.9.7/dist/index.full.js"></script>
@@ -1045,7 +1045,7 @@
 <div id="app">
     <div v-if="!isLoggedIn" class="login-container">
         <div class="login-box">
-            <div class="login-title">Red<span class="logo-accent">C2</span></div>
+            <div class="login-title">Red <span class="logo-accent">Command</span></div>
             <div class="login-subtitle">红队指挥控制平台</div>
             <el-form :model="loginForm" @submit.prevent="handleLogin">
                 <el-form-item>
@@ -1066,12 +1066,12 @@
     <div v-else class="main-layout">
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">Red<span class="logo-accent">C2</span></div>
+                <div class="logo">Red <span class="logo-accent">Command</span></div>
             </div>
             <div class="menu-container">
                 <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'dashboard'}" @click="setCurrentPage('dashboard')">
                     <span class="menu-item-icon">📊</span>
-                    <span>Dashboard</span>
+                    <span>态势总览</span>
                 </div>
                 <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'clients'}" @click="setCurrentPage('clients')">
                     <span class="menu-item-icon">🖥️</span>
@@ -1099,7 +1099,7 @@
                 </div>
                 <div class="menu-item" :class="{active: currentPage === 'chat'}" @click="setCurrentPage('chat')">
                     <span class="menu-item-icon">💬</span>
-                    <span>作战聊天室</span>
+                    <span>作战会议室</span>
                 </div>
                 <div v-if="currentUserRole === 'admin'" class="menu-item" :class="{active: currentPage === 'users'}" @click="setCurrentPage('users')">
                     <span class="menu-item-icon">👥</span>
@@ -2284,7 +2284,7 @@
             <div v-if="currentPage === 'chat'" class="chat-container">
                 <div class="chat-sidebar">
                     <div class="chat-sidebar-header">
-                        <div class="page-title">作战聊天室</div>
+                        <div class="page-title">作战会议室</div>
                         <el-button size="small" type="primary" @click="showCreateRoomDialog = true">+ 创建房间</el-button>
                     </div>
                     <div class="room-list">
@@ -2723,11 +2723,13 @@ createApp({
                 localStorage.setItem('username', res.data.username);
                 localStorage.setItem('role', res.data.role);
                 localStorage.setItem('user_group', res.data.user_group);
+                localStorage.setItem('loginTime', Date.now().toString());
                 username.value = res.data.username;
                 currentUserRole.value = res.data.role;
                 currentUserGroup.value = res.data.user_group;
                 isLoggedIn.value = true;
                 setCurrentPage(res.data.role === 'admin' ? 'dashboard' : 'pen-test');
+                startSessionTimer();
                 if (res.data.role === 'admin') {
                     refreshDashboard();
                 }
@@ -2738,11 +2740,44 @@ createApp({
             }
         };
 
+        let sessionTimer = null;
+
+        const startSessionTimer = () => {
+            if (sessionTimer) {
+                clearInterval(sessionTimer);
+            }
+            const SESSION_TIMEOUT = 20 * 60 * 1000;
+            sessionTimer = setInterval(() => {
+                const loginTime = localStorage.getItem('loginTime');
+                if (loginTime) {
+                    const elapsed = Date.now() - parseInt(loginTime);
+                    if (elapsed >= SESSION_TIMEOUT) {
+                        clearInterval(sessionTimer);
+                        handleLogout();
+                        ElementPlus.ElMessage.warning('会话已超时，请重新登录');
+                    }
+                }
+            }, 60 * 1000);
+        };
+
+        const resetSessionTimer = () => {
+            localStorage.setItem('loginTime', Date.now().toString());
+        };
+
+        document.addEventListener('mousemove', resetSessionTimer);
+        document.addEventListener('keydown', resetSessionTimer);
+        document.addEventListener('click', resetSessionTimer);
+
         const handleLogout = () => {
+            if (sessionTimer) {
+                clearInterval(sessionTimer);
+                sessionTimer = null;
+            }
             localStorage.removeItem('token');
             localStorage.removeItem('username');
             localStorage.removeItem('role');
             localStorage.removeItem('user_group');
+            localStorage.removeItem('loginTime');
             isLoggedIn.value = false;
             currentUserRole.value = 'operator';
             currentUserGroup.value = '';
@@ -2754,11 +2789,7 @@ createApp({
         const refreshDashboard = async () => {
             loading.value = true;
             try {
-                const [statsRes, actionsRes] = await Promise.all([
-                    axios.get(`${API_BASE}/dashboard/stats`),
-                    axios.get(`${API_BASE}/actions?limit=100&action_type=realtime_command`)
-                ]);
-                stats.value = statsRes.data;
+                const actionsRes = await axios.get(`${API_BASE}/actions?limit=100&action_type=realtime_command`);
                 const newActions = actionsRes.data;
                 const existingIds = new Set(recentActions.value.map(a => a.id));
                 newActions.forEach(action => {
@@ -2766,10 +2797,16 @@ createApp({
                         recentActions.value.unshift(action);
                     }
                 });
+            } catch (err) {
+                console.error('获取动作记录失败:', err);
+            }
+            try {
+                const statsRes = await axios.get(`${API_BASE}/dashboard/stats`);
+                stats.value = statsRes.data;
                 await nextTick();
                 initCharts();
             } catch (err) {
-                console.error(err);
+                console.error('获取统计数据失败:', err);
             } finally {
                 loading.value = false;
             }
@@ -4421,7 +4458,7 @@ createApp({
 
         onMounted(() => {
             if (isLoggedIn.value) {
-                if (currentUserRole.value === 'admin') {
+                if (currentPage.value === 'dashboard') {
                     refreshDashboard();
                 }
                 if (currentPage.value === 'recordings') {
