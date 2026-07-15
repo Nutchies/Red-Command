@@ -1110,6 +1110,23 @@ async def get_task_plans(
     return [TaskPlanResponse.from_orm(p) for p in plans]
 
 
+@router.get("/task-plans/active", response_model=List[TaskPlanResponse])
+async def get_active_task_plans(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(TaskPlan).filter(
+        TaskPlan.status.in_(["pending", "active", "running"])
+    ).order_by(TaskPlan.created_at.desc())
+    
+    if current_user.role != "admin":
+        query = query.filter(
+            or_(
+                TaskPlan.created_by == current_user.id,
+                TaskPlan.team == current_user.user_group
+            )
+        )
+    
+    return [TaskPlanResponse.from_orm(p) for p in query.all()]
+
+
 @router.get("/task-plans/{plan_id}", response_model=TaskPlanResponse)
 async def get_task_plan(
     plan_id: int,

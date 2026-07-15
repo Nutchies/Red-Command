@@ -376,7 +376,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
         .stat-card {
             background: var(--bg-card);
@@ -432,13 +432,14 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
         .chart-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             padding: 20px;
+            margin-bottom: 16px;
         }
         .chart-card.full-width { grid-column: span 2; }
         .section-title {
@@ -568,6 +569,147 @@
         }
         .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
         .empty-text { font-size: 14px; }
+
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .task-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            transition: all var(--transition);
+            display: flex;
+            flex-direction: column;
+            min-height: 150px;
+        }
+        .task-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .task-team {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-card-hover);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .task-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .task-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        .task-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .task-meta {
+            display: flex;
+            gap: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .pen-test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .pen-test-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            transition: all var(--transition);
+            display: flex;
+            flex-direction: column;
+            min-height: 140px;
+        }
+        .pen-test-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .pen-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .pen-test-org {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-card-hover);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .pen-test-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .pen-test-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        .pen-test-ip {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .pen-test-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .pen-test-meta {
+            display: flex;
+            gap: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+            flex-shrink: 0;
+        }
 
         .player-container {
             width: 100%;
@@ -1158,6 +1300,57 @@
                             <div class="stat-title">工具数量</div>
                         </div>
                         <div class="stat-value info">{{ stats.tool_count || 0 }}</div>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <div class="section-title">任务总览</div>
+                    <div v-if="activeTasks.length === 0" class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-text">暂无任务</div>
+                    </div>
+                    <div v-else class="task-grid">
+                        <div v-for="task in activeTasks" :key="task.id" class="task-card">
+                            <div class="task-header">
+                                <div class="task-name">{{ task.name }}</div>
+                                <span class="task-team">{{ task.team }}</span>
+                            </div>
+                            <div class="task-content">
+                                <div v-if="task.description" class="task-desc">{{ task.description }}</div>
+                            </div>
+                            <div class="task-meta">
+                                <span class="meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7m16 0v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"/><path d="m7 13 2 2 4-4"/></svg>
+                                    {{ task.targets && task.targets.length > 0 ? task.targets.length : 0 }} 个目标
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <div class="section-title">成果展示</div>
+                    <div v-if="recentPenTestResults.length === 0" class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <div class="empty-text">暂无成果数据</div>
+                    </div>
+                    <div v-else class="pen-test-grid">
+                        <div v-for="result in recentPenTestResults" :key="result.id" class="pen-test-card">
+                            <div class="pen-test-header">
+                                <div class="pen-test-name">{{ result.file_name }}</div>
+                                <span class="pen-test-org">{{ result.target_organization || '未知单位' }}</span>
+                            </div>
+                            <div class="pen-test-content">
+                                <div class="pen-test-ip">目标IP: {{ result.target_ip }}</div>
+                                <div v-if="result.remark" class="pen-test-desc">{{ result.remark }}</div>
+                            </div>
+                            <div class="pen-test-meta">
+                                <span class="meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                    {{ formatFileSize(result.file_size || 0) }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2474,6 +2667,8 @@ createApp({
         const stats = ref({});
         const clients = ref([]);
         const recentActions = ref([]);
+        const activeTasks = ref([]);
+        const recentPenTestResults = ref([]);
         const selectedClient = ref(null);
         const clientActions = ref([]);
         const editingOrg = ref(null);
@@ -2799,6 +2994,20 @@ createApp({
                 });
             } catch (err) {
                 console.error('获取动作记录失败:', err);
+            }
+            try {
+                const tasksRes = await axios.get(`${API_BASE}/task-plans/active`);
+                activeTasks.value = tasksRes.data;
+            } catch (err) {
+                console.error('获取正在执行任务失败:', err);
+                activeTasks.value = [];
+            }
+            try {
+                const penTestRes = await axios.get(`${API_BASE}/pen-test/search?limit=8`);
+                recentPenTestResults.value = penTestRes.data;
+            } catch (err) {
+                console.error('获取成果数据失败:', err);
+                recentPenTestResults.value = [];
             }
             try {
                 const statsRes = await axios.get(`${API_BASE}/dashboard/stats`);
@@ -4506,7 +4715,7 @@ createApp({
 
         return {
                 isLoggedIn, currentPage, loading, loginLoading, username, currentUserRole,
-                loginForm, stats, clients, recentActions,
+                loginForm, stats, clients, recentActions, activeTasks, recentPenTestResults,
                 selectedClient, clientActions, editingOrg, editOrgValue,
                 recordings, recordPage, pagedRecordings, searchKeyword, playerDialogVisible, playerContainer,
                 videoUrl, videoPlayer,
