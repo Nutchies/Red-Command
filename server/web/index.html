@@ -1006,52 +1006,70 @@
             padding: 12px 16px;
             background: rgba(0, 0, 0, 0.2);
             border-bottom: 1px solid var(--border);
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
+        }
+        .members-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
         .members-title {
             font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 8px;
             font-weight: 500;
+        }
+        .members-actions {
+            display: flex;
+            gap: 8px;
         }
         .members-list {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 8px;
         }
         .member-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
+            gap: 10px;
+            padding: 8px 12px;
             background: var(--bg-card);
-            border-radius: 20px;
+            border-radius: var(--radius-sm);
             border: 1px solid var(--border);
         }
         .member-avatar {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: var(--accent);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
         }
         .member-info {
+            flex: 1;
             display: flex;
             flex-direction: column;
         }
         .member-name {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--text-primary);
             font-weight: 500;
         }
-        .member-joined {
+        .member-owner {
             font-size: 10px;
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.15);
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+        }
+        .member-joined {
+            font-size: 11px;
             color: var(--text-muted);
         }
 
@@ -1352,9 +1370,6 @@
                         <div class="page-title">态势总览</div>
                         <div class="page-subtitle">实时监控红队行动状态</div>
                     </div>
-                    <el-button size="small" @click="refreshDashboard" :loading="loading">
-                        <span>🔄</span> 刷新
-                    </el-button>
                 </div>
 
                 <div class="stats-row">
@@ -1476,9 +1491,6 @@
                         ></el-input>
                         <el-button size="small" @click="searchClients" :loading="loading">搜索</el-button>
 
-                        <el-button size="small" @click="fetchClients" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                     </div>
                 </div>
 
@@ -1594,9 +1606,6 @@
                             @keyup.enter="handleSearch"
                         ></el-input>
                         <el-button size="small" @click="handleSearch" :loading="loading">搜索</el-button>
-                        <el-button size="small" @click="handleSearch" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                     </div>
                 </div>
 
@@ -1710,9 +1719,6 @@
                             @keyup.enter="loadPenTestHosts"
                         ></el-input>
                         <el-button size="small" @click="loadPenTestHosts" :loading="loading">搜索</el-button>
-                        <el-button size="small" @click="loadPenTestHosts" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                     </div>
                 </div>
 
@@ -1791,6 +1797,9 @@
                                 <el-table-column prop="created_by_username" label="上传用户" width="120">
                                     <template #default="scope">{{ scope.row.created_by_username || '-' }}</template>
                                 </el-table-column>
+                                <el-table-column prop="created_by_organization" label="用户单位" width="120">
+                                    <template #default="scope">{{ scope.row.created_by_organization || '-' }}</template>
+                                </el-table-column>
                                 <el-table-column prop="created_at" label="上传时间" width="160">
                                     <template #default="scope">{{ formatDateTime(scope.row.created_at) }}</template>
                                 </el-table-column>
@@ -1856,9 +1865,6 @@
                             @keyup.enter="loadTools"
                         ></el-input>
                         <el-button size="small" @click="loadTools" :loading="loading">搜索</el-button>
-                        <el-button size="small" @click="loadTools" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                     </div>
                 </div>
 
@@ -1881,9 +1887,9 @@
                                 <div class="client-card-ip">{{ tool.description || '-' }}</div>
                             </div>
                             <div class="client-card-actions">
-                                <div class="client-card-status" :class="tool.url ? 'online' : 'offline'">
-                                    <span class="client-status" :class="tool.url ? 'online' : 'offline'"></span>
-                                    {{ tool.versions.length }} 个版本
+                                <div class="client-card-status" :class="tool.category === '官网' || tool.url ? 'online' : 'offline'">
+                                    <span class="client-status" :class="tool.category === '官网' || tool.url ? 'online' : 'offline'"></span>
+                                    {{ tool.url ? 1 : tool.versions.length }} 个版本
                                 </div>
                                 <div class="delete-btn" @click.stop="deleteTool(tool)">
                                     ×
@@ -1915,8 +1921,8 @@
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <el-button @click="showToolVersionUploadDialog = true" size="small" type="primary">上传版本</el-button>
-                            <div class="back-btn" @click="selectedTool = null; localStorage.removeItem('selectedToolId')">
+                            <el-button @click="openToolVersionUploadDialog" size="small" type="primary">上传版本</el-button>
+                            <div class="back-btn" @click="selectedTool = null">
                                 ← 返回列表
                             </div>
                         </div>
@@ -1928,25 +1934,46 @@
                         </div>
                         <div v-else class="pen-test-table-wrap">
                             <el-table :data="selectedToolVersions" style="width: 100%" class="dark-table">
-                                <el-table-column prop="version" label="版本号" width="120">
+                                <el-table-column v-if="selectedTool && selectedTool.url" prop="username" label="用户名" width="150">
+                                    <template #default="scope">{{ scope.row.username || '-' }}</template>
+                                </el-table-column>
+                                <el-table-column v-if="selectedTool && selectedTool.url" prop="password" label="密码" width="150">
+                                    <template #default="scope">{{ scope.row.password || '-' }}</template>
+                                </el-table-column>
+                                <el-table-column v-if="selectedTool && selectedTool.url" prop="user_id" label="所属用户" width="150">
+                                    <template #default="scope">
+                                        <span v-if="scope.row.user_id">{{ users.find(u => u.id === scope.row.user_id)?.username || scope.row.user_id }}</span>
+                                        <span v-else>-</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column v-if="selectedTool && selectedTool.url" prop="user_group" label="用户组" width="150">
+                                    <template #default="scope">{{ scope.row.user_group || '-' }}</template>
+                                </el-table-column>
+                                <el-table-column v-if="selectedTool && selectedTool.url" prop="user_id" label="用户单位" width="150">
+                                    <template #default="scope">
+                                        <span v-if="scope.row.user_id">{{ users.find(u => u.id === scope.row.user_id)?.organization || '-' }}</span>
+                                        <span v-else>-</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column v-if="!selectedTool || !selectedTool.url" prop="version" label="版本号" width="120">
                                     <template #default="scope">{{ scope.row.version }}</template>
                                 </el-table-column>
-                                <el-table-column prop="platform" label="平台" width="100">
+                                <el-table-column v-if="!selectedTool || !selectedTool.url" prop="platform" label="平台" width="100">
                                     <template #default="scope">{{ scope.row.platform }}</template>
                                 </el-table-column>
-                                <el-table-column prop="file_name" label="文件名" width="180">
+                                <el-table-column v-if="!selectedTool || !selectedTool.url" prop="file_name" label="文件名" width="180">
                                     <template #default="scope">{{ scope.row.file_name || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="file_size" label="大小" width="100">
+                                <el-table-column v-if="!selectedTool || !selectedTool.url" prop="file_size" label="大小" width="100">
                                     <template #default="scope">{{ formatFileSize(scope.row.file_size) }}</template>
                                 </el-table-column>
-                                <el-table-column prop="url" label="链接" width="250">
+                                <el-table-column v-if="(!selectedTool || !selectedTool.url) && selectedToolVersions.some(v => v.url)" prop="url" label="链接" width="250">
                                     <template #default="scope">
                                         <span v-if="scope.row.url" style="color: var(--accent); word-break: break-all; font-size: 12px;">{{ scope.row.url }}</span>
                                         <span v-else>-</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="created_at" label="上传时间" width="160">
+                                <el-table-column v-if="!selectedTool || !selectedTool.url" prop="created_at" label="上传时间" width="160">
                                     <template #default="scope">{{ formatDateTime(scope.row.created_at) }}</template>
                                 </el-table-column>
                                 <el-table-column label="操作" width="140">
@@ -1971,6 +1998,7 @@
                         </el-form-item>
                         <el-form-item label="分类">
                             <el-select v-model="toolCreateForm.category">
+                                <el-option label="官网" value="官网" />
                                 <el-option label="扫描工具" value="scanner" />
                                 <el-option label="漏洞利用" value="exploit" />
                                 <el-option label="信息收集" value="recon" />
@@ -1992,30 +2020,50 @@
 
                 <el-dialog v-model="showToolVersionUploadDialog" title="上传工具版本" width="500px">
                     <el-form :model="toolVersionUploadForm" label-width="100px">
-                        <el-form-item label="版本号" required>
-                            <el-input v-model="toolVersionUploadForm.version" placeholder="如: 1.0.0" />
-                        </el-form-item>
-                        <el-form-item label="平台">
-                            <el-select v-model="toolVersionUploadForm.platform">
-                                <el-option label="Linux" value="linux" />
-                                <el-option label="Windows" value="windows" />
-                                <el-option label="macOS" value="macos" />
-                                <el-option label="通用" value="universal" />
-                            </el-select>
-                        </el-form-item>
-                        <el-form-item label="下载链接">
-                            <el-input v-model="toolVersionUploadForm.url" placeholder="可选，外部下载链接" />
-                        </el-form-item>
-                        <el-form-item label="文件">
-                            <el-upload
-                                :auto-upload="false"
-                                :on-change="handleToolVersionFileChange"
-                                :file-list="toolVersionUploadFileList"
-                                accept="*"
-                            >
-                                <el-button type="primary">选择文件</el-button>
-                            </el-upload>
-                        </el-form-item>
+                        <template v-if="selectedTool && selectedTool.url">
+                            <el-form-item label="用户名">
+                                <el-input v-model="toolVersionUploadForm.username" placeholder="请输入用户名" />
+                            </el-form-item>
+                            <el-form-item label="密码">
+                                <el-input v-model="toolVersionUploadForm.password" placeholder="请输入密码" type="password" />
+                            </el-form-item>
+                            <el-form-item label="所属用户">
+                                <el-select v-model="toolVersionUploadForm.user_id" placeholder="请选择用户">
+                                    <el-option v-for="user in users" :key="user.id" :label="user.username" :value="user.id" />
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="用户单位">
+                                <el-select v-model="toolVersionUploadForm.user_group" placeholder="请选择单位">
+                                    <el-option v-for="group in userGroups" :key="group" :label="group" :value="group" />
+                                </el-select>
+                            </el-form-item>
+                        </template>
+                        <template v-else>
+                            <el-form-item label="版本号" required>
+                                <el-input v-model="toolVersionUploadForm.version" placeholder="如: 1.0.0" />
+                            </el-form-item>
+                            <el-form-item label="平台">
+                                <el-select v-model="toolVersionUploadForm.platform">
+                                    <el-option label="Linux" value="linux" />
+                                    <el-option label="Windows" value="windows" />
+                                    <el-option label="macOS" value="macos" />
+                                    <el-option label="通用" value="universal" />
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="下载链接">
+                                <el-input v-model="toolVersionUploadForm.url" placeholder="可选，外部下载链接" />
+                            </el-form-item>
+                            <el-form-item label="文件">
+                                <el-upload
+                                    :auto-upload="false"
+                                    :on-change="handleToolVersionFileChange"
+                                    :file-list="toolVersionUploadFileList"
+                                    accept="*"
+                                >
+                                    <el-button type="primary">选择文件</el-button>
+                                </el-upload>
+                            </el-form-item>
+                        </template>
                     </el-form>
                     <template #footer>
                         <el-button @click="showToolVersionUploadDialog = false">取消</el-button>
@@ -2031,21 +2079,14 @@
                         <div class="page-subtitle">管理渗透测试任务分配</div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <el-button @click="showTaskPlanCreateDialog = true" type="success" size="small">新建任务</el-button>
+                        <el-button v-if="!selectedTaskPlan" @click="openTaskPlanCreateDialog" type="success" size="small">新建任务</el-button>
                         <el-input 
                             v-model="taskPlanSearchKeyword" 
-                            placeholder="按名称搜索" 
-                            style="width: 200px;"
+                            placeholder="按目标内容、负责队伍搜索" 
+                            style="width: 350px;"
                             @keyup.enter="loadTaskPlans"
                         ></el-input>
-                        <el-select v-model="taskPlanSearchTeam" placeholder="选择小队" style="width: 150px;">
-                            <el-option label="全部" value="" />
-                            <el-option v-for="team in teams" :key="team" :label="team" :value="team" />
-                        </el-select>
                         <el-button size="small" @click="loadTaskPlans" :loading="loading">搜索</el-button>
-                        <el-button size="small" @click="loadTaskPlans" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                     </div>
                 </div>
 
@@ -2095,10 +2136,8 @@
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <el-button @click="showTaskTargetAddDialog = true" size="small" type="primary">添加目标</el-button>
-                            <div class="back-btn" @click="selectedTaskPlan = null">
-                                ← 返回列表
-                            </div>
+                            <el-button @click="openTaskTargetAddDialog" size="small" type="primary">添加目标</el-button>
+                            <div class="back-btn" @click="selectedTaskPlan = null" style="white-space: nowrap;">← 返回列表</div>
                         </div>
                     </div>
                     <div class="client-actions-list">
@@ -2116,9 +2155,6 @@
                                 </el-table-column>
                                 <el-table-column prop="assigned_team" label="负责队伍" width="120">
                                     <template #default="scope">{{ scope.row.assigned_team || '-' }}</template>
-                                </el-table-column>
-                                <el-table-column prop="organization" label="单位" width="220">
-                                    <template #default="scope">{{ scope.row.organization || '-' }}</template>
                                 </el-table-column>
                                 <el-table-column prop="start_time" label="开始时间" width="180">
                                     <template #default="scope">{{ scope.row.start_time ? formatDateTime(scope.row.start_time) : '-' }}</template>
@@ -2173,10 +2209,9 @@
                             <el-input v-model="taskTargetForm.targetOrganization" placeholder="目标单位名称" />
                         </el-form-item>
                         <el-form-item label="负责队伍">
-                            <el-input v-model="taskTargetForm.assignedTeam" placeholder="负责队伍名称" />
-                        </el-form-item>
-                        <el-form-item label="单位">
-                            <el-input v-model="taskTargetForm.organization" type="textarea" :rows="3" placeholder="单位信息" />
+                            <el-select v-model="taskTargetForm.assignedTeam" placeholder="请选择负责队伍">
+                                <el-option v-for="team in teams" :key="team" :label="team" :value="team" />
+                            </el-select>
                         </el-form-item>
                         <el-form-item label="开始时间">
                             <el-input v-model="taskTargetForm.startTime" type="datetime-local" placeholder="选择开始时间" />
@@ -2206,9 +2241,6 @@
                             @keyup.enter="searchAssets"
                         ></el-input>
                         <el-button size="small" @click="searchAssets" :loading="loading">搜索</el-button>
-                        <el-button size="small" @click="fetchAssets" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                         <el-button size="small" type="primary" @click="showAssetImportDialog = true">
                             <span>📥</span> 导入资产
                         </el-button>
@@ -2329,7 +2361,6 @@
                                         :value="org.value" 
                                     />
                                 </el-select>
-                                <el-button size="small" @click="showAddOrgDialog = true">+ 添加单位</el-button>
                             </div>
                         </el-form-item>
                         <el-form-item label="主要用途">
@@ -2402,9 +2433,6 @@
                         <div class="page-subtitle">点击分组卡片查看成员列表</div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <el-button size="small" @click="fetchUsers" :loading="loading">
-                            <span>🔄</span> 刷新
-                        </el-button>
                         <el-button size="small" type="primary" @click="showUserCreateDialog = true">
                             <span>➕</span> 添加分组
                         </el-button>
@@ -2486,6 +2514,7 @@
                             </div>
                             <div class="action-content" style="display: flex; gap: 20px;">
                                 <span>创建时间: {{ formatDateTime(user.created_at) }}</span>
+                                <span>单位: {{ user.organization || '-' }}</span>
                                 <span>密码: <span :style="{color: user.password ? '#10b981' : '#ef4444'}">{{ user.password || '需重置' }}</span></span>
                             </div>
                             <div style="display: flex; gap: 8px; margin-top: 8px;">
@@ -2526,13 +2555,16 @@
                     </template>
                 </el-dialog>
 
-                <el-dialog v-model="showAddMemberDialog" title="添加成员到 {{ selectedUserGroup }}" width="450px">
+                <el-dialog v-model="showAddMemberDialog" :title="'添加成员到 ' + selectedUserGroup" width="450px">
                     <el-form :model="addMemberForm" label-width="80px">
                         <el-form-item label="用户名" required>
                             <el-input v-model="addMemberForm.username" placeholder="请输入用户名" />
                         </el-form-item>
                         <el-form-item label="密码" required>
                             <el-input v-model="addMemberForm.password" type="password" placeholder="请输入密码" />
+                        </el-form-item>
+                        <el-form-item label="单位">
+                            <el-input v-model="addMemberForm.organization" placeholder="请输入用户单位" />
                         </el-form-item>
                         <el-form-item label="角色">
                             <el-select v-model="addMemberForm.role">
@@ -2582,17 +2614,28 @@
                                 </span>
                             </div>
                         </div>
-                        <el-button size="small" @click="refreshChatMessages">🔄 刷新</el-button>
                     </div>
                     <div v-if="showChatMembers && selectedChatRoom.members" class="chat-members-panel">
-                        <div class="members-title">成员列表</div>
+                        <div class="members-header">
+                            <div class="members-title">成员列表</div>
+                            <div class="members-actions">
+                                <el-button v-if="selectedChatRoom.created_by === currentUserId || currentUserRole === 'admin'" size="small" type="primary" @click="showAddChatMemberDialog = true">+ 添加成员</el-button>
+                                <el-button v-if="selectedChatRoom.created_by === currentUserId || currentUserRole === 'admin'" size="small" type="danger" @click="deleteChatRoom(selectedChatRoom)">删除群</el-button>
+                            </div>
+                        </div>
                         <div class="members-list">
                             <div v-for="member in selectedChatRoom.members" :key="member.user_id" class="member-item">
                                 <div class="member-avatar">{{ member.username?.charAt(0)?.toUpperCase() || '?' }}</div>
                                 <div class="member-info">
-                                    <div class="member-name">{{ member.username }}</div>
+                                    <div class="member-name">{{ member.username }} <span v-if="member.user_id === selectedChatRoom.created_by" class="member-owner">群主</span></div>
                                     <div class="member-joined">加入于 {{ formatDate(member.joined_at) }}</div>
                                 </div>
+                                <el-button 
+                                    v-if="member.user_id !== selectedChatRoom.created_by && (selectedChatRoom.created_by === currentUserId || currentUserRole === 'admin')" 
+                                    size="small" 
+                                    type="danger" 
+                                    @click="removeChatMember(member.user_id)"
+                                >踢出</el-button>
                             </div>
                         </div>
                     </div>
@@ -2702,6 +2745,25 @@
                 </template>
             </el-dialog>
 
+            <el-dialog v-model="showAddChatMemberDialog" title="添加成员" width="400px">
+                <el-form :model="addChatMemberForm" label-width="80px">
+                    <el-form-item label="选择用户">
+                        <el-select v-model="addChatMemberForm.user_id" placeholder="请选择用户">
+                                <el-option 
+                                    v-for="user in availableUsersForAdd" 
+                                    :key="user.id" 
+                                    :label="user.username" 
+                                    :value="user.id" 
+                                />
+                            </el-select>
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <el-button @click="showAddChatMemberDialog = false">取消</el-button>
+                    <el-button @click="addChatMember" type="primary">添加</el-button>
+                </template>
+            </el-dialog>
+
             <el-dialog v-model="showImagePreview" title="图片预览" width="600px">
                 <img :src="API_BASE + previewImagePath" style="max-width: 100%; max-height: 500px;" />
             </el-dialog>
@@ -2743,6 +2805,7 @@ createApp({
         const currentUserRole = ref(localStorage.getItem('role') || 'operator');
         const currentUserGroup = ref(localStorage.getItem('user_group') || '');
         const username = ref(localStorage.getItem('username') || '');
+        const currentUserId = ref(parseInt(localStorage.getItem('user_id')) || 0);
         const savedPage = localStorage.getItem('currentPage');
         const currentPage = ref(savedPage || (currentUserRole.value === 'admin' ? 'dashboard' : 'pen-test'));
 
@@ -2815,7 +2878,11 @@ createApp({
         const toolVersionUploadForm = ref({
             version: '',
             platform: 'linux',
-            url: ''
+            url: '',
+            username: '',
+            password: '',
+            user_id: '',
+            user_group: ''
         });
         const toolVersionUploadFileList = ref([]);
 
@@ -2823,7 +2890,7 @@ createApp({
         const selectedTaskPlan = ref(null);
         const selectedTaskPlanTargets = ref([]);
         const taskPlanSearchKeyword = ref('');
-        const taskPlanSearchTeam = ref('');
+        const taskTargetSearchKeyword = ref('');
         const teams = ref([]);
         const showTaskPlanCreateDialog = ref(false);
         const showTaskTargetAddDialog = ref(false);
@@ -2867,6 +2934,7 @@ createApp({
         const addMemberForm = ref({
             username: '',
             password: '',
+            organization: '',
             role: 'operator'
         });
 
@@ -3026,10 +3094,12 @@ createApp({
                 localStorage.setItem('username', res.data.username);
                 localStorage.setItem('role', res.data.role);
                 localStorage.setItem('user_group', res.data.user_group);
+                localStorage.setItem('user_id', res.data.user_id?.toString() || '');
                 localStorage.setItem('loginTime', Date.now().toString());
                 username.value = res.data.username;
                 currentUserRole.value = res.data.role;
                 currentUserGroup.value = res.data.user_group;
+                currentUserId.value = res.data.user_id || 0;
                 isLoggedIn.value = true;
                 setCurrentPage(res.data.role === 'admin' ? 'dashboard' : 'pen-test');
                 startSessionTimer();
@@ -3305,17 +3375,6 @@ createApp({
                 recordings.value = res.data;
                 recordPage.value = 1;
                 buildRecordingClients();
-                
-                const savedClientId = localStorage.getItem('selectedRecordingClientId');
-                if (savedClientId && recordingClients.value.length > 0) {
-                    const savedClient = recordingClients.value.find(c => c.id.toString() === savedClientId);
-                    if (savedClient) {
-                        const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
-                        if (isPageReload) {
-                            selectRecordingClient(savedClient);
-                        }
-                    }
-                }
             } catch (err) {
                 console.error(err);
                 recordings.value = [];
@@ -3565,6 +3624,11 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/pen-test/${row.id}`);
                 ElementPlus.ElMessage.success('删除成功');
+                if (selectedPenTestHost.value) {
+                    localStorage.setItem('selectedPenTestHostIp', selectedPenTestHost.value.target_ip);
+                    sessionStorage.setItem('penTestRefreshWithHost', 'true');
+                }
+                localStorage.setItem('currentPage', 'pen-test');
                 sessionStorage.removeItem('pageSwitchFlag');
                 window.location.reload();
             } catch (err) {
@@ -3584,6 +3648,8 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/pen-test/batch/${encodeURIComponent(host.target_ip)}`);
                 ElementPlus.ElMessage.success('删除成功');
+                localStorage.removeItem('selectedPenTestHostIp');
+                localStorage.setItem('currentPage', 'pen-test');
                 sessionStorage.removeItem('pageSwitchFlag');
                 window.location.reload();
             } catch (err) {
@@ -3632,12 +3698,20 @@ createApp({
 
         const selectTool = async (tool) => {
             selectedTool.value = tool;
-            localStorage.setItem('selectedToolId', tool.id.toString());
             loading.value = true;
             try {
                 const url = `${API_BASE}/tools/${tool.id}/versions`;
                 const res = await axios.get(url);
                 selectedToolVersions.value = res.data;
+                
+                if (tool.url) {
+                    try {
+                        const usersRes = await axios.get(`${API_BASE}/users/list`);
+                        users.value = usersRes.data;
+                    } catch (err) {
+                        console.error('Failed to load users:', err);
+                    }
+                }
             } catch (err) {
                 console.error('Failed to load tool versions:', err);
                 selectedToolVersions.value = [];
@@ -3686,26 +3760,57 @@ createApp({
             }
         };
 
+        const openToolVersionUploadDialog = async () => {
+            if (selectedTool.value && selectedTool.value.url) {
+                try {
+                    const usersRes = await axios.get(`${API_BASE}/users/list`);
+                    users.value = usersRes.data;
+                    const groupsRes = await axios.get(`${API_BASE}/users/groups`);
+                    userGroups.value = groupsRes.data;
+                } catch (err) {
+                    console.error('Failed to load users/groups:', err);
+                }
+            }
+            showToolVersionUploadDialog.value = true;
+        };
+
         const handleToolVersionFileChange = (file) => {
             toolVersionUploadFileList.value = [file];
         };
 
         const uploadToolVersion = async () => {
-            if (!toolVersionUploadForm.value.version) {
-                ElementPlus.ElMessage.error('请输入版本号');
-                return;
-            }
-
             loading.value = true;
             try {
                 const formData = new FormData();
-                formData.append('version', toolVersionUploadForm.value.version);
-                formData.append('platform', toolVersionUploadForm.value.platform);
-                if (toolVersionUploadForm.value.url) {
-                    formData.append('url', toolVersionUploadForm.value.url);
-                }
-                if (toolVersionUploadFileList.value.length > 0) {
-                    formData.append('file', toolVersionUploadFileList.value[0].raw);
+                if (selectedTool.value && selectedTool.value.url) {
+                    formData.append('version', '1.0.0');
+                    formData.append('platform', 'universal');
+                    if (toolVersionUploadForm.value.username) {
+                        formData.append('username', toolVersionUploadForm.value.username);
+                    }
+                    if (toolVersionUploadForm.value.password) {
+                        formData.append('password', toolVersionUploadForm.value.password);
+                    }
+                    if (toolVersionUploadForm.value.user_id) {
+                        formData.append('user_id', toolVersionUploadForm.value.user_id);
+                    }
+                    if (toolVersionUploadForm.value.user_group) {
+                        formData.append('user_group', toolVersionUploadForm.value.user_group);
+                    }
+                } else {
+                    if (!toolVersionUploadForm.value.version) {
+                        ElementPlus.ElMessage.error('请输入版本号');
+                        loading.value = false;
+                        return;
+                    }
+                    formData.append('version', toolVersionUploadForm.value.version);
+                    formData.append('platform', toolVersionUploadForm.value.platform);
+                    if (toolVersionUploadForm.value.url) {
+                        formData.append('url', toolVersionUploadForm.value.url);
+                    }
+                    if (toolVersionUploadFileList.value.length > 0) {
+                        formData.append('file', toolVersionUploadFileList.value[0].raw);
+                    }
                 }
 
                 await axios.post(`${API_BASE}/tools/${selectedTool.value.id}/versions`, formData, {
@@ -3717,7 +3822,11 @@ createApp({
                 toolVersionUploadForm.value = {
                     version: '',
                     platform: 'linux',
-                    url: ''
+                    url: '',
+                    username: '',
+                    password: '',
+                    user_id: '',
+                    user_group: ''
                 };
                 toolVersionUploadFileList.value = [];
                 if (selectedTool.value) {
@@ -3781,20 +3890,11 @@ createApp({
                 if (taskPlanSearchKeyword.value.trim()) {
                     params.push(`keyword=${encodeURIComponent(taskPlanSearchKeyword.value.trim())}`);
                 }
-                if (taskPlanSearchTeam.value) {
-                    params.push(`team=${encodeURIComponent(taskPlanSearchTeam.value)}`);
-                }
                 if (params.length > 0) {
                     url += '?' + params.join('&');
                 }
                 const plansRes = await axios.get(url);
                 taskPlans.value = plansRes.data;
-                try {
-                    const groupsRes = await axios.get(`${API_BASE}/users/groups`);
-                    teams.value = groupsRes.data;
-                } catch (groupsErr) {
-                    console.error('Failed to load groups:', groupsErr);
-                }
             } catch (err) {
                 console.error('Failed to load task plans:', err);
                 taskPlans.value = [];
@@ -3807,7 +3907,8 @@ createApp({
             selectedTaskPlan.value = plan;
             loading.value = true;
             try {
-                const url = `${API_BASE}/task-plans/${plan.id}/targets`;
+                const keyword = taskTargetSearchKeyword.value;
+                const url = `${API_BASE}/task-plans/${plan.id}/targets${keyword ? '?keyword=' + encodeURIComponent(keyword) : ''}`;
                 const res = await axios.get(url);
                 selectedTaskPlanTargets.value = res.data;
             } catch (err) {
@@ -3816,6 +3917,17 @@ createApp({
             } finally {
                 loading.value = false;
             }
+        };
+
+        const openTaskPlanCreateDialog = async () => {
+            try {
+                const groupsRes = await axios.get(`${API_BASE}/users/groups`);
+                teams.value = groupsRes.data;
+            } catch (err) {
+                console.error('Failed to load groups:', err);
+                teams.value = [];
+            }
+            showTaskPlanCreateDialog.value = true;
         };
 
         const closeTaskPlanDialog = () => {
@@ -3897,15 +4009,36 @@ createApp({
             }
         };
 
+        const openTaskTargetAddDialog = async () => {
+            try {
+                const groupsRes = await axios.get(`${API_BASE}/users/groups`);
+                teams.value = groupsRes.data;
+            } catch (err) {
+                console.error('Failed to load groups:', err);
+                teams.value = [];
+            }
+            editingTaskTarget.value = null;
+            taskTargetForm.value = {
+                targetValue: '',
+                targetOrganization: '',
+                assignedTeam: '',
+                organization: '',
+                startTime: '',
+                endTime: ''
+            };
+            showTaskTargetAddDialog.value = true;
+        };
+
         const closeTaskTargetDialog = () => {
             showTaskTargetAddDialog.value = false;
             editingTaskTarget.value = null;
             taskTargetForm.value = {
                 targetValue: '',
                 targetOrganization: '',
-                priority: 'medium',
-                assignedTo: '',
-                notes: ''
+                assignedTeam: '',
+                organization: '',
+                startTime: '',
+                endTime: ''
             };
         };
 
@@ -3981,7 +4114,7 @@ createApp({
                 await axios.delete(`${API_BASE}/task-targets/${target.id}`);
                 ElementPlus.ElMessage.success('删除成功');
                 sessionStorage.removeItem('pageSwitchFlag');
-                window.location.reload();
+                await selectTaskPlan(selectedTaskPlan.value);
             } catch (err) {
                 if (err !== 'cancel') {
                     console.error('Delete failed:', err);
@@ -4164,8 +4297,17 @@ createApp({
         const chatInput = ref('');
         const showCreateRoomDialog = ref(false);
         const showChatMembers = ref(false);
+        const showAddChatMemberDialog = ref(false);
         const createRoomForm = ref({ name: '', description: '', member_ids: [] });
+        const addChatMemberForm = ref({ user_id: null });
         const chatAvailableUsers = ref([]);
+        const availableUsersForAdd = computed(() => {
+            if (!selectedChatRoom.value || !selectedChatRoom.value.members) {
+                return chatAvailableUsers.value;
+            }
+            const memberIds = new Set(selectedChatRoom.value.members.map(m => m.user_id));
+            return chatAvailableUsers.value.filter(u => !memberIds.has(u.id));
+        });
         const showEmojiPicker = ref(false);
         const emojis = ['😊', '😂', '🤣', '😍', '🥰', '😎', '🤔', '😤', '😭', '👍', '👎', '👏', '🎉', '🔥', '💯', '✅', '❌', '⚠️', '💡', '🎯', '🔒', '🔓', '💾', '📤', '📥', '🔍', '🚀', '💪', '🙌', '👀'];
         const replyingToMessage = ref(null);
@@ -4253,6 +4395,113 @@ createApp({
                 await fetchChatRooms();
             } catch (err) {
                 ElementPlus.ElMessage.error('创建失败: ' + (err.response?.data?.detail || err.message));
+            }
+        };
+
+        const addChatMember = async () => {
+            if (!addChatMemberForm.value.user_id) {
+                ElementPlus.ElMessage.error('请选择用户');
+                return;
+            }
+            if (!selectedChatRoom.value) {
+                ElementPlus.ElMessage.error('请先选择聊天室');
+                return;
+            }
+            try {
+                await axios.post(`${API_BASE}/chat/rooms/${selectedChatRoom.value.id}/members`, {
+                    user_id: addChatMemberForm.value.user_id
+                });
+                ElementPlus.ElMessage.success('添加成功');
+                showAddChatMemberDialog.value = false;
+                addChatMemberForm.value = { user_id: null };
+                await fetchChatRooms();
+                if (selectedChatRoom.value) {
+                    const updatedRoom = chatRooms.value.find(r => r.id === selectedChatRoom.value.id);
+                    if (updatedRoom) {
+                        selectedChatRoom.value = updatedRoom;
+                    }
+                }
+            } catch (err) {
+                let errorMsg = '添加失败';
+                if (err.response && err.response.data) {
+                    if (typeof err.response.data.detail === 'string') {
+                        errorMsg = err.response.data.detail;
+                    } else if (typeof err.response.data === 'string') {
+                        errorMsg = err.response.data;
+                    } else if (Array.isArray(err.response.data.detail)) {
+                        errorMsg = err.response.data.detail[0].msg || '添加失败';
+                    }
+                } else if (err.message) {
+                    errorMsg = err.message;
+                }
+                ElementPlus.ElMessage.error(errorMsg);
+            }
+        };
+
+        const removeChatMember = async (user_id) => {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确定踢出该成员吗？', '确认踢出', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                await axios.delete(`${API_BASE}/chat/rooms/${selectedChatRoom.value.id}/members/${user_id}`);
+                ElementPlus.ElMessage.success('踢出成功');
+                await fetchChatRooms();
+                if (selectedChatRoom.value) {
+                    const updatedRoom = chatRooms.value.find(r => r.id === selectedChatRoom.value.id);
+                    if (updatedRoom) {
+                        selectedChatRoom.value = updatedRoom;
+                    }
+                }
+            } catch (err) {
+                if (err !== 'cancel') {
+                    let errorMsg = '踢出失败';
+                    if (err.response && err.response.data) {
+                        if (typeof err.response.data.detail === 'string') {
+                            errorMsg = err.response.data.detail;
+                        } else if (typeof err.response.data === 'string') {
+                            errorMsg = err.response.data;
+                        } else if (Array.isArray(err.response.data.detail)) {
+                            errorMsg = err.response.data.detail[0].msg || '踢出失败';
+                        }
+                    } else if (err.message) {
+                        errorMsg = err.message;
+                    }
+                    ElementPlus.ElMessage.error(errorMsg);
+                }
+            }
+        };
+
+        const deleteChatRoom = async (room) => {
+            try {
+                await ElementPlus.ElMessageBox.confirm(`确定删除群 "${room.name}" 吗？删除后所有消息将被清除。`, '确认删除', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                await axios.delete(`${API_BASE}/chat/rooms/${room.id}`);
+                ElementPlus.ElMessage.success('删除成功');
+                selectedChatRoom.value = null;
+                showChatMembers.value = false;
+                chatMessages.value = [];
+                await fetchChatRooms();
+            } catch (err) {
+                if (err !== 'cancel') {
+                    let errorMsg = '删除失败';
+                    if (err.response && err.response.data) {
+                        if (typeof err.response.data.detail === 'string') {
+                            errorMsg = err.response.data.detail;
+                        } else if (typeof err.response.data === 'string') {
+                            errorMsg = err.response.data;
+                        } else if (Array.isArray(err.response.data.detail)) {
+                            errorMsg = err.response.data.detail[0].msg || '删除失败';
+                        }
+                    } else if (err.message) {
+                        errorMsg = err.message;
+                    }
+                    ElementPlus.ElMessage.error(errorMsg);
+                }
             }
         };
 
@@ -4546,6 +4795,7 @@ createApp({
                 await axios.post(`${API_BASE}/users`, {
                     username: addMemberForm.value.username,
                     password: addMemberForm.value.password,
+                    organization: addMemberForm.value.organization,
                     role: addMemberForm.value.role,
                     user_group: selectedUserGroup.value
                 });
@@ -4554,6 +4804,7 @@ createApp({
                 addMemberForm.value = {
                     username: '',
                     password: '',
+                    organization: '',
                     role: 'operator'
                 };
                 await fetchUsers();
@@ -4766,6 +5017,8 @@ createApp({
                 loadPenTestHosts();
             }
             if (page === 'tools') {
+                selectedTool.value = null;
+                selectedToolVersions.value = [];
                 loadTools();
             }
             if (page === 'task-plans') {
@@ -4774,6 +5027,7 @@ createApp({
                 loadTaskPlans();
             }
             if (page === 'users') {
+                selectedUserGroup.value = null;
                 fetchUsers();
             }
             if (page === 'assets') {
@@ -4794,44 +5048,23 @@ createApp({
                 } else if (currentPage.value === 'assets') {
                     fetchAssets();
                 } else if (currentPage.value === 'tools') {
-                    loadTools().then(() => {
-                        const savedToolId = localStorage.getItem('selectedToolId');
-                        if (savedToolId && tools.value.length > 0) {
-                            const savedTool = tools.value.find(t => t.id.toString() === savedToolId);
-                            if (savedTool) {
-                                const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
-                                if (isPageReload) {
-                                    selectTool(savedTool);
-                                }
-                            }
-                        }
-                    });
+                    loadTools();
                 } else if (currentPage.value === 'task-plans') {
                     loadTaskPlans();
                 } else if (currentPage.value === 'pen-test') {
                     loadPenTestHosts().then(() => {
                         const savedHostIp = localStorage.getItem('selectedPenTestHostIp');
-                        if (savedHostIp && penTestHosts.value.length > 0) {
+                        const refreshWithHost = sessionStorage.getItem('penTestRefreshWithHost');
+                        if (savedHostIp && penTestHosts.value.length > 0 && refreshWithHost) {
                             const savedHost = penTestHosts.value.find(h => h.target_ip === savedHostIp);
                             if (savedHost) {
-                                const isPageReload = !sessionStorage.getItem('pageSwitchFlag');
-                                if (isPageReload) {
-                                    selectPenTestHost(savedHost);
-                                }
+                                selectPenTestHost(savedHost);
                             }
+                            sessionStorage.removeItem('penTestRefreshWithHost');
                         }
                     });
                 } else if (currentPage.value === 'users') {
-                    fetchUsers().then(() => {
-                        const savedGroup = localStorage.getItem('selectedUserGroup');
-                        if (savedGroup && userGroups.value.length > 0) {
-                            if (userGroups.value.includes(savedGroup)) {
-                                selectedUserGroup.value = savedGroup;
-                            } else {
-                                localStorage.removeItem('selectedUserGroup');
-                            }
-                        }
-                    });
+                    fetchUsers();
                 } else if (currentPage.value === 'chat') {
                     fetchChatRooms();
                 }
@@ -4840,7 +5073,7 @@ createApp({
         });
 
         return {
-                isLoggedIn, currentPage, loading, loginLoading, username, currentUserRole,
+                isLoggedIn, currentPage, loading, loginLoading, username, currentUserRole, currentUserId,
                 loginForm, stats, clients, recentActions, activeTasks, recentPenTestResults,
                 selectedClient, clientActions, editingOrg, editOrgValue,
                 recordings, recordPage, pagedRecordings, searchKeyword, playerDialogVisible, playerContainer,
@@ -4851,10 +5084,10 @@ createApp({
                 penTestSearchKeyword, penTestSearchForm, penTestUploadForm,
                 showPenTestUploadDialog, penTestUploadFileList,
                 tools, selectedTool, selectedToolVersions, toolSearchKeyword,
-                showToolCreateDialog, showToolVersionUploadDialog,
+                showToolCreateDialog, showToolVersionUploadDialog, openToolVersionUploadDialog,
                 toolCreateForm, toolVersionUploadForm, toolVersionUploadFileList,
                 taskPlans, selectedTaskPlan, selectedTaskPlanTargets,
-                taskPlanSearchKeyword, taskPlanSearchTeam, teams,
+                taskPlanSearchKeyword, taskTargetSearchKeyword, teams,
                 showTaskPlanCreateDialog, showTaskTargetAddDialog,
                 editingTaskPlan, editingTaskTarget,
                 taskPlanForm, taskTargetForm,
@@ -4870,7 +5103,7 @@ createApp({
                 contextMenuVisible, contextMenuPosition, selectedOrgForAction,
                 addOrgForm, editingAsset, assetForm,
                 chatRooms, selectedChatRoom, chatMessages, chatInput,
-                showCreateRoomDialog, showChatMembers, createRoomForm, chatAvailableUsers, showEmojiPicker,
+                showCreateRoomDialog, showChatMembers, showAddChatMemberDialog, createRoomForm, addChatMemberForm, chatAvailableUsers, availableUsersForAdd, showEmojiPicker,
                 emojis, replyingToMessage, showImagePreview, previewImagePath,
                 chatImageInput, chatFileInput, websocket,
                 handleLogin, refreshDashboard, fetchClients,
@@ -4886,8 +5119,8 @@ createApp({
                 createTool, handleToolVersionFileChange, uploadToolVersion,
                 downloadToolVersion, handleVisit, deleteToolVersion, deleteTool,
                 loadTaskPlans, selectTaskPlan,
-                closeTaskPlanDialog, saveTaskPlan, deleteTaskPlan,
-                closeTaskTargetDialog, saveTaskTarget, editTaskTarget, deleteTaskTarget, formatDateTimeLocal,
+                openTaskPlanCreateDialog, closeTaskPlanDialog, saveTaskPlan, deleteTaskPlan,
+                openTaskTargetAddDialog, closeTaskTargetDialog, saveTaskTarget, editTaskTarget, deleteTaskTarget, formatDateTimeLocal,
                 fetchUsers, searchUsers, getUsersByGroup, getUserCountByGroup,
                 getAdminCountByGroup, getActiveCountByGroup,
                 selectUserGroup, closeGroupDialog, createGroup, deleteGroup,
@@ -4897,7 +5130,7 @@ createApp({
                 handleOrgContextMenu, closeContextMenu, addOrg, addSubOrg, addAssetUnderOrg,
                 editAsset, saveAsset, deleteAsset,
                 fetchChatRooms, selectChatRoom, fetchChatMessages,
-                sendMessage, createRoom, refreshChatMessages,
+                sendMessage, createRoom, addChatMember, removeChatMember, deleteChatRoom, refreshChatMessages,
                 toggleEmojiPicker, insertEmoji, replyToMessage,
                 handleMessageContextMenu, handleChatImageUpload,
                 handleChatFileUpload, previewImage,

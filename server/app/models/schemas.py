@@ -9,6 +9,7 @@ class Token(BaseModel):
     username: str
     role: str
     user_group: str
+    user_id: int
 
 
 class TokenData(BaseModel):
@@ -27,6 +28,7 @@ class UserResponse(UserBase):
     id: int
     role: str
     user_group: str
+    organization: str
     is_active: bool
     created_at: datetime
     password: Optional[str] = None
@@ -39,6 +41,7 @@ class UserCreateRequest(UserBase):
     password: str
     role: Optional[str] = "operator"
     user_group: Optional[str] = "未分组"
+    organization: Optional[str] = ""
 
 
 class UserUpdateRequest(BaseModel):
@@ -153,6 +156,7 @@ class PenTestResultResponse(BaseModel):
     user_group: Optional[str] = None
     created_by: Optional[int] = None
     created_by_username: Optional[str] = None
+    created_by_organization: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -167,6 +171,10 @@ class ToolVersionResponse(BaseModel):
     platform: str
     url: Optional[str]
     file_path: Optional[str]
+    username: Optional[str]
+    password: Optional[str]
+    user_id: Optional[int]
+    user_group: Optional[str]
     created_at: datetime
 
     class Config:
@@ -261,6 +269,10 @@ class ChatRoomCreateRequest(BaseModel):
     name: str
     description: Optional[str] = None
     member_ids: Optional[List[int]] = []
+
+
+class AddChatMemberRequest(BaseModel):
+    user_id: int
 
 
 class ChatMessageResponse(BaseModel):

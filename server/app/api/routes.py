@@ -25,7 +25,7 @@ from app.models.schemas import (
     VideoResponse, PenTestResultResponse, ToolResponse, ToolVersionResponse,
     TaskPlanResponse, TaskTargetResponse,
     AssetResponse, AssetCreateRequest, AssetUpdateRequest,
-    ChatRoomResponse, ChatRoomCreateRequest, ChatMessageResponse, ChatMessageCreateRequest
+    ChatRoomResponse, ChatRoomCreateRequest, ChatMessageResponse, ChatMessageCreateRequest, AddChatMemberRequest
 )
 from app.models.models import User, Client, Action, AIExtracted, Video, PenTestResult, Tool, ToolVersion, TaskPlan, TaskTarget, Asset, ChatRoom, ChatMessage, ChatRoomMember
 from app.services.services import ClientService, ActionService
@@ -96,7 +96,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         "token_type": "bearer",
         "username": user.username,
         "role": user.role,
-        "user_group": user.user_group
+        "user_group": user.user_group,
+        "user_id": user.id
     }
 
 
@@ -153,7 +154,8 @@ async def create_user(user_data: UserCreateRequest, db: Session = Depends(get_db
         username=user_data.username,
         password_hash=encrypted_password,
         role=user_data.role or "operator",
-        user_group=user_data.user_group or "未分组"
+        user_group=user_data.user_group or "未分组",
+        organization=user_data.organization or ""
     )
     db.add(user)
     db.commit()
@@ -164,7 +166,7 @@ async def create_user(user_data: UserCreateRequest, db: Session = Depends(get_db
 
 
 @router.get("/users/groups")
-async def get_user_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
+async def get_user_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     groups = db.query(User.user_group).distinct().all()
     return [g[0] for g in groups]
 
@@ -748,7 +750,7 @@ async def search_pen_test_results(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(PenTestResult, User.username.label("created_by_username"))\
+    query = db.query(PenTestResult, User.username.label("created_by_username"), User.organization.label("created_by_organization"))\
               .outerjoin(User, PenTestResult.created_by == User.id)
     
     if current_user.role != "admin":
@@ -777,9 +779,10 @@ async def search_pen_test_results(
     results = query.order_by(PenTestResult.created_at.desc()).limit(limit).all()
     
     response_list = []
-    for result, username in results:
+    for result, username, organization in results:
         response = PenTestResultResponse.from_orm(result)
         response.created_by_username = username
+        response.created_by_organization = organization
         response_list.append(response)
     
     return response_list
@@ -975,6 +978,10 @@ async def upload_tool_version(
     version: str = Form(...),
     platform: Optional[str] = Form("linux"),
     url: Optional[str] = Form(None),
+    username: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+    user_id: Optional[int] = Form(None),
+    user_group: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -1009,6 +1016,11 @@ async def upload_tool_version(
         file_name = file.filename
         file_size = len(contents)
     
+    if user_id is None:
+        user_id = current_user.id
+    if user_group is None:
+        user_group = current_user.user_group
+    
     tool_version = ToolVersion(
         tool_id=tool_id,
         version=version,
@@ -1016,7 +1028,11 @@ async def upload_tool_version(
         file_name=file_name,
         file_size=file_size,
         platform=platform,
-        url=url
+        url=url,
+        username=username,
+        password=password,
+        user_id=user_id,
+        user_group=user_group
     )
     
     db.add(tool_version)
@@ -1036,9 +1052,17 @@ async def get_tool_versions(
     if not tool:
         raise HTTPException(status_code=404, detail="工具不存在")
     
-    versions = db.query(ToolVersion).filter(
-        ToolVersion.tool_id == tool_id
-    ).order_by(ToolVersion.version.desc()).all()
+    query = db.query(ToolVersion).filter(ToolVersion.tool_id == tool_id)
+    
+    if current_user.role != "admin":
+        query = query.filter(
+            or_(
+                ToolVersion.user_id == current_user.id,
+                ToolVersion.user_group == current_user.user_group
+            )
+        )
+    
+    versions = query.order_by(ToolVersion.version.desc()).all()
     
     return [ToolVersionResponse.from_orm(v) for v in versions]
 
@@ -1112,7 +1136,6 @@ async def create_task_plan(
 @router.get("/task-plans", response_model=List[TaskPlanResponse])
 async def get_task_plans(
     keyword: Optional[str] = "",
-    team: Optional[str] = "",
     status: Optional[str] = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -1128,10 +1151,16 @@ async def get_task_plans(
         )
     
     if keyword:
-        query = query.filter(TaskPlan.name.like(f"%{keyword}%"))
-    
-    if team:
-        query = query.filter(TaskPlan.team == team)
+        query = query.filter(
+            TaskPlan.id.in_(
+                db.query(TaskTarget.plan_id).filter(
+                    or_(
+                        TaskTarget.target_value.like(f"%{keyword}%"),
+                        TaskTarget.assigned_team.like(f"%{keyword}%")
+                    )
+                )
+            )
+        )
     
     if status:
         query = query.filter(TaskPlan.status == status)
@@ -1274,6 +1303,7 @@ async def add_task_target(
 @router.get("/task-plans/{plan_id}/targets", response_model=List[TaskTargetResponse])
 async def get_task_targets(
     plan_id: int,
+    keyword: Optional[str] = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1281,9 +1311,15 @@ async def get_task_targets(
     if not plan:
         raise HTTPException(status_code=404, detail="任务管理不存在")
     
-    targets = db.query(TaskTarget).filter(
-        TaskTarget.plan_id == plan_id
-    ).order_by(TaskTarget.created_at.desc()).all()
+    query = db.query(TaskTarget).filter(TaskTarget.plan_id == plan_id)
+    
+    if keyword:
+        query = query.filter(or_(
+            TaskTarget.target_value.like(f"%{keyword}%"),
+            TaskTarget.assigned_team.like(f"%{keyword}%")
+        ))
+    
+    targets = query.order_by(TaskTarget.created_at.desc()).all()
     
     return [TaskTargetResponse.from_orm(t) for t in targets]
 
@@ -1748,3 +1784,72 @@ async def download_chat_file(file_id: str, current_user: User = Depends(get_curr
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="文件不存在")
     return FileResponse(file_path)
+
+
+@router.post("/chat/rooms/{room_id}/members")
+async def add_chat_member(room_id: int, request: AddChatMemberRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="聊天室不存在")
+    
+    if room.created_by != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="只有群主或管理员可以添加成员")
+    
+    existing = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == request.user_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="用户已在群中")
+    
+    target_user = db.query(User).filter(User.id == request.user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    member = ChatRoomMember(room_id=room_id, user_id=request.user_id)
+    db.add(member)
+    db.commit()
+    
+    return {"message": "添加成功"}
+
+
+@router.delete("/chat/rooms/{room_id}/members/{user_id}")
+async def remove_chat_member(room_id: int, user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="聊天室不存在")
+    
+    if room.created_by != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="只有群主或管理员可以移除成员")
+    
+    if room.created_by == user_id:
+        raise HTTPException(status_code=400, detail="不能移除群主")
+    
+    member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == user_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="用户不在群中")
+    
+    db.delete(member)
+    db.commit()
+    
+    return {"message": "移除成功"}
+
+
+@router.delete("/chat/rooms/{room_id}")
+async def delete_chat_room(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="聊天室不存在")
+    
+    if room.created_by != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="只有群主或管理员可以删除群")
+    
+    db.query(ChatMessage).filter(ChatMessage.room_id == room_id).delete()
+    db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).delete()
+    db.delete(room)
+    db.commit()
+    
+    return {"message": "删除成功"}

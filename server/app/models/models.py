@@ -12,6 +12,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="operator")
     user_group = Column(String(50), default="未分组")
+    organization = Column(String(100), default="")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -117,6 +118,10 @@ class ToolVersion(Base):
     file_size = Column(Integer, default=0)
     platform = Column(String(50), default="linux")
     url = Column(String(500))
+    username = Column(String(100))
+    password = Column(String(500))
+    user_id = Column(Integer)
+    user_group = Column(String(100))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     tool = relationship("Tool", back_populates="versions")
