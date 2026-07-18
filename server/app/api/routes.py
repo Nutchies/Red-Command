@@ -137,6 +137,12 @@ async def get_users(db: Session = Depends(get_db), current_user: User = Depends(
     return result
 
 
+@router.get("/users/list", response_model=List[dict])
+async def get_user_list(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    users = db.query(User.id, User.username, User.user_group).all()
+    return [{"id": user.id, "username": user.username, "user_group": user.user_group} for user in users]
+
+
 @router.post("/users", response_model=UserResponse)
 async def create_user(user_data: UserCreateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     if db.query(User).filter(User.username == user_data.username).first():
@@ -733,26 +739,50 @@ async def upload_pen_test_result(
 
 @router.get("/pen-test/search", response_model=List[PenTestResultResponse])
 async def search_pen_test_results(
+    keyword: Optional[str] = "",
     target_ip: Optional[str] = "",
     category: Optional[str] = "",
+    user_group: Optional[str] = "",
+    created_by_username: Optional[str] = "",
     limit: int = 50,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(PenTestResult)
+    query = db.query(PenTestResult, User.username.label("created_by_username"))\
+              .outerjoin(User, PenTestResult.created_by == User.id)
     
     if current_user.role != "admin":
         query = query.filter(PenTestResult.created_by == current_user.id)
     
-    if target_ip:
-        query = query.filter(PenTestResult.target_ip.like(f"%{target_ip}%"))
-    
-    if category:
-        query = query.filter(PenTestResult.category == category)
+    if keyword:
+        query = query.filter(or_(
+            PenTestResult.file_name.like(f"%{keyword}%"),
+            PenTestResult.target_ip.like(f"%{keyword}%"),
+            User.username.like(f"%{keyword}%"),
+            PenTestResult.user_group.like(f"%{keyword}%")
+        ))
+    else:
+        if target_ip:
+            query = query.filter(PenTestResult.target_ip.like(f"%{target_ip}%"))
+        
+        if category:
+            query = query.filter(PenTestResult.category == category)
+        
+        if user_group:
+            query = query.filter(PenTestResult.user_group.like(f"%{user_group}%"))
+        
+        if created_by_username:
+            query = query.filter(User.username.like(f"%{created_by_username}%"))
     
     results = query.order_by(PenTestResult.created_at.desc()).limit(limit).all()
     
-    return [PenTestResultResponse.from_orm(r) for r in results]
+    response_list = []
+    for result, username in results:
+        response = PenTestResultResponse.from_orm(result)
+        response.created_by_username = username
+        response_list.append(response)
+    
+    return response_list
 
 
 @router.get("/pen-test/{result_id}")
@@ -1198,10 +1228,11 @@ async def add_task_target(
     plan_id: int,
     target_value: str = Form(...),
     target_organization: Optional[str] = Form(None),
-    priority: Optional[str] = Form("medium"),
     progress: Optional[int] = Form(0),
-    notes: Optional[str] = Form(None),
-    assigned_to: Optional[str] = Form(None),
+    organization: Optional[str] = Form(None),
+    assigned_team: Optional[str] = Form(None),
+    start_time: Optional[str] = Form(None),
+    end_time: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1209,20 +1240,34 @@ async def add_task_target(
     if not plan:
         raise HTTPException(status_code=404, detail="任务管理不存在")
     
+    from datetime import datetime as dt
+    
+    start_time_dt = None
+    end_time_dt = None
+    if start_time:
+        try:
+            start_time_dt = dt.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+        except:
+            pass
+    if end_time:
+        try:
+            end_time_dt = dt.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+        except:
+            pass
+    
     target = TaskTarget(
         plan_id=plan_id,
         target_value=target_value,
         target_organization=target_organization,
-        priority=priority,
         progress=progress,
-        notes=notes,
-        assigned_to=assigned_to
+        organization=organization,
+        assigned_team=assigned_team,
+        start_time=start_time_dt,
+        end_time=end_time_dt
     )
-    
     db.add(target)
     db.commit()
     db.refresh(target)
-    
     return TaskTargetResponse.from_orm(target)
 
 
@@ -1248,10 +1293,11 @@ async def update_task_target(
     target_id: int,
     target_value: Optional[str] = Form(None),
     target_organization: Optional[str] = Form(None),
-    priority: Optional[str] = Form(None),
     progress: Optional[int] = Form(None),
-    notes: Optional[str] = Form(None),
-    assigned_to: Optional[str] = Form(None),
+    organization: Optional[str] = Form(None),
+    assigned_team: Optional[str] = Form(None),
+    start_time: Optional[str] = Form(None),
+    end_time: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1259,22 +1305,31 @@ async def update_task_target(
     if not target:
         raise HTTPException(status_code=404, detail="目标不存在")
     
+    from datetime import datetime as dt
+    
     if target_value:
         target.target_value = target_value
-    if target_organization is not None:
+    if target_organization:
         target.target_organization = target_organization
-    if priority:
-        target.priority = priority
     if progress is not None:
         target.progress = progress
-    if notes is not None:
-        target.notes = notes
-    if assigned_to is not None:
-        target.assigned_to = assigned_to
+    if organization:
+        target.organization = organization
+    if assigned_team:
+        target.assigned_team = assigned_team
+    if start_time:
+        try:
+            target.start_time = dt.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+        except:
+            pass
+    if end_time:
+        try:
+            target.end_time = dt.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+        except:
+            pass
     
     db.commit()
     db.refresh(target)
-    
     return TaskTargetResponse.from_orm(target)
 
 

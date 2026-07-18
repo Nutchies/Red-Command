@@ -147,12 +147,12 @@ class TaskTarget(Base):
     plan_id = Column(Integer, ForeignKey("task_plans.id", ondelete="CASCADE"), nullable=False)
     target_value = Column(String(500), nullable=False)
     target_organization = Column(String(255))
-    priority = Column(String(10), default="medium")
     progress = Column(Integer, default=0)
-    notes = Column(Text)
-    assigned_to = Column(String(100))
+    organization = Column(Text)
+    assigned_team = Column(String(100))
+    start_time = Column(DateTime(timezone=True))
+    end_time = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     plan = relationship("TaskPlan", back_populates="targets")
 

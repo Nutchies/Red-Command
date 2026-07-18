@@ -150,6 +150,9 @@ class PenTestResultResponse(BaseModel):
     file_type: Optional[str]
     remark: Optional[str]
     category: str
+    user_group: Optional[str] = None
+    created_by: Optional[int] = None
+    created_by_username: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -188,12 +191,12 @@ class TaskTargetResponse(BaseModel):
     plan_id: int
     target_value: str
     target_organization: Optional[str]
-    priority: str
     progress: int
-    notes: Optional[str]
-    assigned_to: Optional[str]
+    organization: Optional[str]
+    assigned_team: Optional[str]
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
     created_at: datetime
-    updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True

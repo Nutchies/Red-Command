@@ -574,6 +574,22 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 16px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .task-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .task-grid::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 3px;
+        }
+        .task-grid::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        .task-grid::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
         .task-card {
             background: rgba(255, 255, 255, 0.03);
@@ -645,6 +661,22 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 16px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .pen-test-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .pen-test-grid::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 3px;
+        }
+        .pen-test-grid::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        .pen-test-grid::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
         .pen-test-card {
             background: rgba(255, 255, 255, 0.03);
@@ -654,7 +686,7 @@
             transition: all var(--transition);
             display: flex;
             flex-direction: column;
-            min-height: 140px;
+            min-height: 150px;
         }
         .pen-test-card:hover {
             background: rgba(255, 255, 255, 0.05);
@@ -969,6 +1001,59 @@
 
         .chat-room-name { font-weight: 600; color: var(--text-primary); }
         .chat-room-users { font-size: 12px; color: var(--text-muted); }
+
+        .chat-members-panel {
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .members-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .members-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+        .member-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .member-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .member-name {
+            font-size: 12px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .member-joined {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
 
         .chat-messages {
             flex: 1;
@@ -1616,12 +1701,12 @@
                         <div class="page-title">渗透成果汇总</div>
                         <div class="page-subtitle">点击卡片查看主机成果文件</div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                         <el-button v-if="!selectedPenTestHost" @click="showPenTestUploadDialog = true" type="success" size="small">上传文件</el-button>
                         <el-input 
                             v-model="penTestSearchKeyword" 
-                            placeholder="按IP搜索" 
-                            style="width: 200px;"
+                            placeholder="搜索文件名、用户名、IP" 
+                            style="width: 300px;"
                             @keyup.enter="loadPenTestHosts"
                         ></el-input>
                         <el-button size="small" @click="loadPenTestHosts" :loading="loading">搜索</el-button>
@@ -1700,14 +1785,20 @@
                                 <el-table-column prop="target_organization" label="目标单位" width="150">
                                     <template #default="scope">{{ scope.row.target_organization || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="file_size" label="大小" width="80">
-                                    <template #default="scope">{{ formatFileSize(scope.row.file_size) }}</template>
+                                <el-table-column prop="user_group" label="上传队伍" width="120">
+                                    <template #default="scope">{{ scope.row.user_group || '-' }}</template>
+                                </el-table-column>
+                                <el-table-column prop="created_by_username" label="上传用户" width="120">
+                                    <template #default="scope">{{ scope.row.created_by_username || '-' }}</template>
+                                </el-table-column>
+                                <el-table-column prop="created_at" label="上传时间" width="160">
+                                    <template #default="scope">{{ formatDateTime(scope.row.created_at) }}</template>
                                 </el-table-column>
                                 <el-table-column prop="remark" label="备注" width="200">
                                     <template #default="scope">{{ scope.row.remark || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="created_at" label="上传时间" width="160">
-                                    <template #default="scope">{{ formatDateTime(scope.row.created_at) }}</template>
+                                <el-table-column prop="file_size" label="大小" width="80">
+                                    <template #default="scope">{{ formatFileSize(scope.row.file_size) }}</template>
                                 </el-table-column>
                                 <el-table-column label="操作" width="140">
                                     <template #default="scope">
@@ -1940,7 +2031,7 @@
                         <div class="page-subtitle">管理渗透测试任务分配</div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <el-button @click="showTaskPlanCreateDialog = true" type="success" size="small">新建筹划</el-button>
+                        <el-button @click="showTaskPlanCreateDialog = true" type="success" size="small">新建任务</el-button>
                         <el-input 
                             v-model="taskPlanSearchKeyword" 
                             placeholder="按名称搜索" 
@@ -2023,21 +2114,17 @@
                                 <el-table-column prop="target_organization" label="目标单位" width="160">
                                     <template #default="scope">{{ scope.row.target_organization || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="priority" label="优先级" width="100">
-                                    <template #default="scope">
-                                        <span :style="{ color: scope.row.priority === 'high' ? '#f56c6c' : (scope.row.priority === 'low' ? '#909399' : '#e6a23c') }">
-                                            {{ scope.row.priority === 'high' ? '高' : (scope.row.priority === 'low' ? '低' : '中') }}
-                                        </span>
-                                    </template>
+                                <el-table-column prop="assigned_team" label="负责队伍" width="120">
+                                    <template #default="scope">{{ scope.row.assigned_team || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="assigned_to" label="负责人" width="120">
-                                    <template #default="scope">{{ scope.row.assigned_to || '-' }}</template>
+                                <el-table-column prop="organization" label="单位" width="220">
+                                    <template #default="scope">{{ scope.row.organization || '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="notes" label="备注" width="220">
-                                    <template #default="scope">{{ scope.row.notes || '-' }}</template>
+                                <el-table-column prop="start_time" label="开始时间" width="180">
+                                    <template #default="scope">{{ scope.row.start_time ? formatDateTime(scope.row.start_time) : '-' }}</template>
                                 </el-table-column>
-                                <el-table-column prop="updated_at" label="更新时间" width="180">
-                                    <template #default="scope">{{ formatDateTime(scope.row.updated_at) }}</template>
+                                <el-table-column prop="end_time" label="结束时间" width="180">
+                                    <template #default="scope">{{ scope.row.end_time ? formatDateTime(scope.row.end_time) : '-' }}</template>
                                 </el-table-column>
                                 <el-table-column label="操作" width="140">
                                     <template #default="scope">
@@ -2052,7 +2139,7 @@
 
                 <el-dialog v-model="showTaskPlanCreateDialog" :title="editingTaskPlan ? '编辑任务管理' : '新建任务管理'" width="500px">
                     <el-form :model="taskPlanForm" label-width="100px">
-                        <el-form-item label="筹划名称" required>
+                        <el-form-item label="任务名称" required>
                             <el-input v-model="taskPlanForm.name" placeholder="输入任务管理名称" />
                         </el-form-item>
                         <el-form-item label="描述">
@@ -2085,19 +2172,17 @@
                         <el-form-item label="目标单位">
                             <el-input v-model="taskTargetForm.targetOrganization" placeholder="目标单位名称" />
                         </el-form-item>
-                        <el-form-item label="优先级">
-                            <el-select v-model="taskTargetForm.priority">
-                                <el-option label="高" value="high" />
-                                <el-option label="中" value="medium" />
-                                <el-option label="低" value="low" />
-                            </el-select>
+                        <el-form-item label="负责队伍">
+                            <el-input v-model="taskTargetForm.assignedTeam" placeholder="负责队伍名称" />
                         </el-form-item>
-
-                        <el-form-item label="负责人">
-                            <el-input v-model="taskTargetForm.assignedTo" placeholder="负责人姓名" />
+                        <el-form-item label="单位">
+                            <el-input v-model="taskTargetForm.organization" type="textarea" :rows="3" placeholder="单位信息" />
                         </el-form-item>
-                        <el-form-item label="备注">
-                            <el-input v-model="taskTargetForm.notes" type="textarea" :rows="3" placeholder="备注信息" />
+                        <el-form-item label="开始时间">
+                            <el-input v-model="taskTargetForm.startTime" type="datetime-local" placeholder="选择开始时间" />
+                        </el-form-item>
+                        <el-form-item label="结束时间">
+                            <el-input v-model="taskTargetForm.endTime" type="datetime-local" placeholder="选择结束时间" />
                         </el-form-item>
                     </el-form>
                     <template #footer>
@@ -2379,7 +2464,7 @@
                             <el-button size="small" type="primary" @click="showAddMemberDialog = true">
                                 <span>➕</span> 添加成员
                             </el-button>
-                            <div class="back-btn" @click="selectedUserGroup = null">
+                            <div class="back-btn" @click="selectedUserGroup = null; localStorage.removeItem('selectedUserGroup')">
                                 ← 返回分组列表
                             </div>
                         </div>
@@ -2397,17 +2482,7 @@
                                     </span>
                                     <span class="action-host">{{ user.username }}</span>
                                 </span>
-                                <span style="display: flex; gap: 8px; align-items: center;">
-                                    <span 
-                                        class="user-card-status" 
-                                        :class="user.is_active ? 'active' : 'inactive'"
-                                    >
-                                        {{ user.is_active ? '启用' : '禁用' }}
-                                    </span>
-                                    <div class="delete-btn" @click.stop="deleteUser(user)">
-                                        ×
-                                    </div>
-                                </span>
+                                
                             </div>
                             <div class="action-content" style="display: flex; gap: 20px;">
                                 <span>创建时间: {{ formatDateTime(user.created_at) }}</span>
@@ -2423,10 +2498,10 @@
                                 </el-button>
                                 <el-button 
                                     size="small" 
-                                    @click="toggleUserStatus(user)"
-                                    :type="user.is_active ? 'warning' : 'success'"
+                                    @click="deleteUser(user)"
+                                    type="danger"
                                 >
-                                    {{ user.is_active ? '禁用' : '启用' }}
+                                    删除用户
                                 </el-button>
                             </div>
                         </div>
@@ -2501,9 +2576,25 @@
                     <div class="chat-header">
                         <div class="chat-room-info">
                             <div class="chat-room-name">{{ selectedChatRoom.name }}</div>
-                            <div class="chat-room-users">在线</div>
+                            <div class="chat-room-users">
+                                <span style="cursor: pointer;" @click="showChatMembers = !showChatMembers">
+                                    {{ selectedChatRoom.members?.length || 0 }} 名成员 ▼
+                                </span>
+                            </div>
                         </div>
                         <el-button size="small" @click="refreshChatMessages">🔄 刷新</el-button>
+                    </div>
+                    <div v-if="showChatMembers && selectedChatRoom.members" class="chat-members-panel">
+                        <div class="members-title">成员列表</div>
+                        <div class="members-list">
+                            <div v-for="member in selectedChatRoom.members" :key="member.user_id" class="member-item">
+                                <div class="member-avatar">{{ member.username?.charAt(0)?.toUpperCase() || '?' }}</div>
+                                <div class="member-info">
+                                    <div class="member-name">{{ member.username }}</div>
+                                    <div class="member-joined">加入于 {{ formatDate(member.joined_at) }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div ref="chatMessagesContainer" class="chat-messages">
                         <div v-if="chatMessages.length === 0" class="empty-state">
@@ -2696,7 +2787,9 @@ createApp({
         const penTestSearchKeyword = ref('');
         const penTestSearchForm = ref({
             target_ip: '',
-            category: ''
+            category: '',
+            user_group: '',
+            created_by_username: ''
         });
         const penTestUploadForm = ref({
             target_ip: '',
@@ -2747,9 +2840,10 @@ createApp({
         const taskTargetForm = ref({
             targetValue: '',
             targetOrganization: '',
-            priority: 'medium',
-            assignedTo: '',
-            notes: ''
+            assignedTeam: '',
+            organization: '',
+            startTime: '',
+            endTime: ''
         });
 
         const users = ref([]);
@@ -2889,6 +2983,20 @@ createApp({
             }
         };
         const formatDate = formatDateTime;
+        const formatDateTimeLocal = (datetimeStr) => {
+            if (!datetimeStr) return '';
+            try {
+                const date = new Date(datetimeStr);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            } catch {
+                return '';
+            }
+        };
 
         const formatFileSize = (bytes) => {
             if (!bytes) return '0 B';
@@ -3281,7 +3389,7 @@ createApp({
             try {
                 let url = `${API_BASE}/pen-test/search?limit=100`;
                 if (penTestSearchKeyword.value) {
-                    url += `&target_ip=${encodeURIComponent(penTestSearchKeyword.value)}`;
+                    url += `&keyword=${encodeURIComponent(penTestSearchKeyword.value)}`;
                 }
                 const res = await axios.get(url);
                 const results = res.data;
@@ -3336,11 +3444,11 @@ createApp({
             loading.value = true;
             try {
                 let url = `${API_BASE}/pen-test/search?limit=100`;
-                if (penTestSearchForm.value.target_ip) {
-                    url += `&target_ip=${encodeURIComponent(penTestSearchForm.value.target_ip)}`;
+                if (selectedPenTestHost.value) {
+                    url += `&target_ip=${encodeURIComponent(selectedPenTestHost.value.target_ip)}`;
                 }
-                if (penTestSearchForm.value.category) {
-                    url += `&category=${encodeURIComponent(penTestSearchForm.value.category)}`;
+                if (penTestSearchKeyword.value) {
+                    url += `&keyword=${encodeURIComponent(penTestSearchKeyword.value)}`;
                 }
                 const res = await axios.get(url);
                 penTestResults.value = res.data;
@@ -3725,7 +3833,7 @@ createApp({
 
         const saveTaskPlan = async () => {
             if (!taskPlanForm.value.name) {
-                ElementPlus.ElMessage.error('请输入筹划名称');
+                ElementPlus.ElMessage.error('请输入任务名称');
                 return;
             }
             if (!taskPlanForm.value.team) {
@@ -3814,12 +3922,17 @@ createApp({
                 if (taskTargetForm.value.targetOrganization) {
                     formData.append('target_organization', taskTargetForm.value.targetOrganization);
                 }
-                formData.append('priority', taskTargetForm.value.priority);
-                if (taskTargetForm.value.assignedTo) {
-                    formData.append('assigned_to', taskTargetForm.value.assignedTo);
+                if (taskTargetForm.value.assignedTeam) {
+                    formData.append('assigned_team', taskTargetForm.value.assignedTeam);
                 }
-                if (taskTargetForm.value.notes) {
-                    formData.append('notes', taskTargetForm.value.notes);
+                if (taskTargetForm.value.organization) {
+                    formData.append('organization', taskTargetForm.value.organization);
+                }
+                if (taskTargetForm.value.startTime) {
+                    formData.append('start_time', taskTargetForm.value.startTime);
+                }
+                if (taskTargetForm.value.endTime) {
+                    formData.append('end_time', taskTargetForm.value.endTime);
                 }
 
                 if (editingTaskTarget.value) {
@@ -3850,9 +3963,10 @@ createApp({
             taskTargetForm.value = {
                 targetValue: target.target_value,
                 targetOrganization: target.target_organization || '',
-                priority: target.priority,
-                assignedTo: target.assigned_to || '',
-                notes: target.notes || ''
+                assignedTeam: target.assigned_team || '',
+                organization: target.organization || '',
+                startTime: target.start_time ? formatDateTimeLocal(target.start_time) : '',
+                endTime: target.end_time ? formatDateTimeLocal(target.end_time) : ''
             };
             showTaskTargetAddDialog.value = true;
         };
@@ -4049,6 +4163,7 @@ createApp({
         const chatMessages = ref([]);
         const chatInput = ref('');
         const showCreateRoomDialog = ref(false);
+        const showChatMembers = ref(false);
         const createRoomForm = ref({ name: '', description: '', member_ids: [] });
         const chatAvailableUsers = ref([]);
         const showEmojiPicker = ref(false);
@@ -4364,6 +4479,7 @@ createApp({
 
         const selectUserGroup = (group) => {
             selectedUserGroup.value = group;
+            localStorage.setItem('selectedUserGroup', group);
         };
 
         const closeGroupDialog = () => {
@@ -4457,6 +4573,7 @@ createApp({
                 });
                 await axios.delete(`${API_BASE}/users/${user.id}`);
                 ElementPlus.ElMessage.success('用户删除成功');
+                localStorage.setItem('selectedUserGroup', selectedUserGroup.value || '');
                 sessionStorage.removeItem('pageSwitchFlag');
                 window.location.reload();
             } catch (err) {
@@ -4705,7 +4822,16 @@ createApp({
                         }
                     });
                 } else if (currentPage.value === 'users') {
-                    fetchUsers();
+                    fetchUsers().then(() => {
+                        const savedGroup = localStorage.getItem('selectedUserGroup');
+                        if (savedGroup && userGroups.value.length > 0) {
+                            if (userGroups.value.includes(savedGroup)) {
+                                selectedUserGroup.value = savedGroup;
+                            } else {
+                                localStorage.removeItem('selectedUserGroup');
+                            }
+                        }
+                    });
                 } else if (currentPage.value === 'chat') {
                     fetchChatRooms();
                 }
@@ -4744,7 +4870,7 @@ createApp({
                 contextMenuVisible, contextMenuPosition, selectedOrgForAction,
                 addOrgForm, editingAsset, assetForm,
                 chatRooms, selectedChatRoom, chatMessages, chatInput,
-                showCreateRoomDialog, createRoomForm, chatAvailableUsers, showEmojiPicker,
+                showCreateRoomDialog, showChatMembers, createRoomForm, chatAvailableUsers, showEmojiPicker,
                 emojis, replyingToMessage, showImagePreview, previewImagePath,
                 chatImageInput, chatFileInput, websocket,
                 handleLogin, refreshDashboard, fetchClients,
@@ -4761,7 +4887,7 @@ createApp({
                 downloadToolVersion, handleVisit, deleteToolVersion, deleteTool,
                 loadTaskPlans, selectTaskPlan,
                 closeTaskPlanDialog, saveTaskPlan, deleteTaskPlan,
-                closeTaskTargetDialog, saveTaskTarget, editTaskTarget, deleteTaskTarget,
+                closeTaskTargetDialog, saveTaskTarget, editTaskTarget, deleteTaskTarget, formatDateTimeLocal,
                 fetchUsers, searchUsers, getUsersByGroup, getUserCountByGroup,
                 getAdminCountByGroup, getActiveCountByGroup,
                 selectUserGroup, closeGroupDialog, createGroup, deleteGroup,
