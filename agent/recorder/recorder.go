@@ -18,7 +18,7 @@ import (
 const (
 	recordDir          = "recordings"
 	uploadInterval     = 60 * time.Second
-	maxSegmentDuration = 60
+	maxSegmentDuration = 180
 	frameRate          = 5
 	videoQuality       = 23
 	maxWidth           = 1280

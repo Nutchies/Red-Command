@@ -81,7 +81,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	recordTicker := time.NewTicker(60 * time.Second)
+	recordTicker := time.NewTicker(180 * time.Second)
 	defer recordTicker.Stop()
 
 	ticker := time.NewTicker(30 * time.Second)
